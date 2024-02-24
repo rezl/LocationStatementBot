@@ -21,17 +21,17 @@ class Post:
         return self.created_time + timedelta(minutes=time_mins) < datetime.utcnow()
 
     def find_location_statement(self):
-        ss_candidates = []
+        candidates = []
         for comment in self.submission.comments:
             if comment.is_submitter:
-                ss_candidates.append(comment)
+                candidates.append(comment)
 
-        if len(ss_candidates) == 0:
+        if len(candidates) == 0:
             return None
 
-        for candidate in ss_candidates:
+        for candidate in candidates:
             text = candidate.body.lower()
-            if ("location" in text):
+            if "location" in text:
                 return candidate
         return None
 
