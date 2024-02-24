@@ -5,7 +5,7 @@ class Settings:
     # is_dry_run and post_check_frequency_mins should not be overridden
     # set to True to prevent any bot actions (report, remove, comments)
     is_dry_run = False
-    post_check_frequency_mins = 1
+    post_check_frequency_mins = 5
 
     report_location_statement_timeout = True
 
