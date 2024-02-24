@@ -1,6 +1,9 @@
-app = "location-bot"
-kill_signal = "SIGINT"
-kill_timeout = 5
-processes = []
+# fly.toml app configuration file generated for location-bot on 2024-02-24T22:00:20Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-[env]
+app = "location-bot"
+primary_region = "ord"
+kill_signal = "SIGINT"
+kill_timeout = "5s"
