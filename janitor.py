@@ -78,7 +78,7 @@ class Janitor:
             location_statement_state = Janitor.validate_location_statement(location_statement.body)
             location_statement = location_statement.body
 
-        timeout_mins = settings.submission_statement_time_limit_mins
+        timeout_mins = settings.location_statement_time_limit_mins
 
         # users are given time to post a submission statement
         if not post.is_post_old(timeout_mins):
