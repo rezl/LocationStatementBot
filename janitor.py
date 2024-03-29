@@ -90,18 +90,16 @@ class Janitor:
                 location_statement_state == LocationStatementState.INVALID:
             print(f"\tPost has {location_statement_state} location statement")
             if post.is_moderator_approved():
-                print("Normally would report, but am not")
-                # self.reddit_handler.report_content(post.submission,
-                #                                    f"Moderator approved post, but is a {location_statement_state}"
-                #                                    f" location statement. Please look.")
+                self.reddit_handler.report_content(post.submission,
+                                                   f"Moderator approved post, but is a {location_statement_state}"
+                                                   f" location statement. Please look.")
             elif settings.report_location_statement_timeout:
-                print("Normally would report, but am not")
-                # self.reddit_handler.report_content(post.submission,
-                #                                    f"Post has a {location_statement_state} location statement "
-                #                                    f"after timeout. Please look.")
-            # else:
-            #     self.reddit_handler.remove_content(post.submission, settings.ss_removal_reason,
-            #                                        f"{location_statement_state} location statement")
+                self.reddit_handler.report_content(post.submission,
+                                                   f"Post has a {location_statement_state} location statement "
+                                                   f"after timeout. Please look.")
+            else:
+                self.reddit_handler.remove_content(post.submission, settings.ss_removal_reason,
+                                                   f"{location_statement_state} location statement")
         elif location_statement_state == LocationStatementState.VALID:
             post.submission.save()
             print("\tPost has valid location statement")
