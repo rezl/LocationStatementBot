@@ -9,7 +9,7 @@ from settings import Settings
 
 class DiscordClient(commands.Bot):
     def __init__(self, error_guild_name, error_guild_channel):
-        super().__init__('#', intents=discord.Intents.all())
+        super().__init__('&', intents=discord.Intents.all())
         self.error_guild_name = error_guild_name
         self.error_channel_name = error_guild_channel
         self.error_guild = None
