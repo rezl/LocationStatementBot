@@ -14,7 +14,7 @@ class Settings:
 
     location_statement_time_limit_mins = 30
 
-    sightings_flair = ["sightings report"]
+    sightings_flair = ["sighting report"]
     ls_removal_reason = ("Your post has been removed for not including a location statement, "
                          "meaning post text or a comment on your own post that provides location for the link. "
                          "If you still wish to share your post you must resubmit your link "
