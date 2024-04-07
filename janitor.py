@@ -46,9 +46,9 @@ class Janitor:
         if not location_statement:
             return LocationStatementState.MISSING
         try:
-            location_unparsed = re.search(r'location(.*)\n', location_statement).group(1)
+            location_unparsed = re.search(r'location(.*)\n', location_statement, re.IGNORECASE).group(1)
             location = re.sub(r'[!:; ]', '', location_unparsed)
-            time_seen_unparsed = re.search(r'time(.*)\n', location_statement).group(1)
+            time_seen_unparsed = re.search(r'time(.*)\n', location_statement, re.IGNORECASE).group(1)
             time_seen = re.sub(r'[!:; ]', ' ', time_seen_unparsed)
         except Exception as e:
             return LocationStatementState.INVALID
@@ -105,9 +105,9 @@ class Janitor:
             print("\tPost has valid location statement")
             # mark as read?
             # sql injection?
-            location_unparsed = re.search(r'location(.*)\n', location_statement).group(1)
+            location_unparsed = re.search(r'location(.*)\n', location_statement, re.IGNORECASE).group(1)
             location = re.sub(r'[!@#$%^&*(){};:./<>?|`~=_+ ]', '', location_unparsed)
-            time_seen_unparsed = re.search(r'time(.*)\n', location_statement).group(1)
+            time_seen_unparsed = re.search(r'time(.*)\n', location_statement, re.IGNORECASE).group(1)
             time_seen = re.sub(r'[!@#$%^&*(){};:,./<>?|`~=_+ ]', '', time_seen_unparsed)
             self.google_sheets_recorder.append_to_sheet(subreddit.display_name, location, time_seen)
         else:
