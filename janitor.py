@@ -99,7 +99,7 @@ class Janitor:
                                                    f"Post has a {location_statement_state} location statement "
                                                    f"after timeout. Please look.")
             else:
-                self.reddit_handler.remove_content(post.submission, settings.ss_removal_reason,
+                self.reddit_handler.remove_content(post.submission, settings.ls_removal_reason,
                                                    f"{location_statement_state} location statement")
         elif location_statement_state == LocationStatementState.VALID:
             self.reddit_handler.save_content(post.submission)
