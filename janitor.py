@@ -81,7 +81,7 @@ class Janitor:
 
         timeout_mins = settings.location_statement_time_limit_mins
 
-        # users are given time to post a submission statement
+        # users are given time to post a location statement
         if not post.is_post_old(timeout_mins):
             print("\tTime has not expired")
             return
