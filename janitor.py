@@ -51,6 +51,7 @@ class Janitor:
             time_seen_unparsed = re.search(r'time(.*)\n', location_statement, re.IGNORECASE).group(1)
             time_seen = re.sub(r'[!:; ]', ' ', time_seen_unparsed)
         except Exception as e:
+            print(f"Exception {e} during keyword parsing. Marking invalid.")
             return LocationStatementState.INVALID
         if not location or not time_seen:
             return LocationStatementState.INVALID
