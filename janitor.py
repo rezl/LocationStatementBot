@@ -46,10 +46,8 @@ class Janitor:
         if not location_statement:
             return LocationStatementState.MISSING
         try:
-            location_unparsed = re.search(r'location(.*)\n', location_statement, re.IGNORECASE).group(1)
-            location = re.sub(r'[!:; ]', '', location_unparsed)
-            time_seen_unparsed = re.search(r'time(.*)\n', location_statement, re.IGNORECASE).group(1)
-            time_seen = re.sub(r'[!:; ]', ' ', time_seen_unparsed)
+            location = re.search(r'location: *(.*)\n', location_statement, re.IGNORECASE).group(1)
+            time_seen = re.search(r'time: *(.*)\n', location_statement, re.IGNORECASE).group(1)
         except Exception as e:
             print(f"Exception {e} during keyword parsing. Marking invalid.")
             return LocationStatementState.INVALID
@@ -104,12 +102,9 @@ class Janitor:
         elif location_statement_state == LocationStatementState.VALID:
             self.reddit_handler.save_content(post.submission)
             print("\tPost has valid location statement")
-            # mark as read?
             # sql injection?
-            location_unparsed = re.search(r'location(.*)\n', location_statement, re.IGNORECASE).group(1)
-            location = re.sub(r'[!@#$%^&*(){};:./<>?|`~=_+ ]', '', location_unparsed)
-            time_seen_unparsed = re.search(r'time(.*)\n', location_statement, re.IGNORECASE).group(1)
-            time_seen = re.sub(r'[!@#$%^&*(){};:,./<>?|`~=_+ ]', '', time_seen_unparsed)
+            location = re.search(r'location: *(.*)\n', location_statement, re.IGNORECASE).group(1)
+            time_seen = re.search(r'time: *(.*)\n', location_statement, re.IGNORECASE).group(1)
             self.google_sheets_recorder.append_to_sheet(subreddit.display_name, location, time_seen)
         else:
             raise RuntimeError(f"\tUnsupported location_statement_state: {location_statement_state}")
