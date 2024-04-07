@@ -60,6 +60,7 @@ class Janitor:
         if not post.has_sightings_flair(settings):
             return
         if hasattr(post.submission, "saved") and post.submission.saved:
+            # content saving is the way we persist whether the bot has seen/actioned this content
             return
 
         location_statement = ''
