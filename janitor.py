@@ -102,7 +102,7 @@ class Janitor:
                 self.reddit_handler.remove_content(post.submission, settings.ss_removal_reason,
                                                    f"{location_statement_state} location statement")
         elif location_statement_state == LocationStatementState.VALID:
-            post.submission.save()
+            self.reddit_handler.save_content(post.submission)
             print("\tPost has valid location statement")
             # mark as read?
             # sql injection?

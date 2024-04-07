@@ -24,6 +24,10 @@ class RedditActionsHandler:
         print(f"\tReporting content {content}, reason: {reason}")
         self.reddit_call(lambda: content.report(reason))
 
+    def save_content(self, content):
+        print(f"\tSaving content {content}")
+        self.reddit_call(lambda: content.save)
+
     def reply_to_content(self, content, reason, pin=True, lock=False, ignore_reports=False):
         print(f"\tReplying to content, reason: {reason}")
         max_chars = 10000
