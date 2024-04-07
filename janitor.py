@@ -63,6 +63,7 @@ class Janitor:
             # content saving is the way we persist whether the bot has seen/actioned this content
             return
 
+        # order of preference: post text (self post or link post), then top-level OP comment
         location_statement = ''
         location_statement_state = LocationStatementState.MISSING
         # use link post's text if valid
