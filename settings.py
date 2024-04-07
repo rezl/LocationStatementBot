@@ -7,7 +7,7 @@ class Settings:
     is_dry_run = False
     post_check_frequency_mins = 5
 
-    report_location_statement_timeout = True
+    report_location_statement_timeout = False
 
     post_check_threshold_mins = 2 * 60
     consecutive_old_posts = 5
@@ -15,10 +15,11 @@ class Settings:
     location_statement_time_limit_mins = 30
 
     sightings_flair = ["sighting report"]
-    ls_removal_reason = ("Your post has been removed for not including a location statement, "
-                         "meaning post text or a comment on your own post that provides location for the link. "
-                         "If you still wish to share your post you must resubmit your link "
-                         "accompanied by a location statement."
+    ls_removal_reason = ("Your post has been removed for not including a sighting info, "
+                         "meaning post text or a comment on your own post that provides sighting location and time. "
+                         "If you still wish to share your post you must resubmit your link with these:\n"
+                         "Time: <date and time>"
+                         "Location: <location of sighting>"
                          "\n\n"
                          "This is a bot. Replies will not receive responses. "
                          "Please message the moderators if you feel this was an error.")
