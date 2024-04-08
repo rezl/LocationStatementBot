@@ -26,7 +26,7 @@ class RedditActionsHandler:
 
     def save_content(self, content):
         print(f"\tSaving content {content}")
-        self.reddit_call(lambda: content.save)
+        self.reddit_call(lambda: content.save())
 
     def reply_to_content(self, content, reason, pin=True, lock=False, ignore_reports=False):
         print(f"\tReplying to content, reason: {reason}")
