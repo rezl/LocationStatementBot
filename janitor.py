@@ -102,6 +102,8 @@ class Janitor:
                 self.reddit_handler.remove_content(post.submission, settings.ls_removal_reason,
                                                    f"{location_statement_state} location statement")
         elif location_statement_state == LocationStatementState.VALID:
+            # we 'save' the submission on reddit so the bot knows which posts it's already recorded
+            # and 'saved' content does not need further processing
             self.reddit_handler.save_content(post.submission)
             print("\tPost has valid location statement")
             # sql injection?
