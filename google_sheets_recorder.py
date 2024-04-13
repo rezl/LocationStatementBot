@@ -38,7 +38,7 @@ class GoogleSheetsRecorder:
         monitored_sub = MonitoredSubreddit(subreddit_name, sheet_id, sheet_name)
         self.monitored_subs[subreddit_name.lower()] = monitored_sub
 
-    def append_to_sheet(self, subreddit_name, location, time_seen):
+    def append_to_sheet(self, subreddit_name, values):
         subreddit_name = subreddit_name.lower()
         if subreddit_name not in self.monitored_subs:
             print(f"Ignoring mod action as unmonitored sub: {subreddit_name}")
@@ -46,8 +46,6 @@ class GoogleSheetsRecorder:
         monitored_sub = self.monitored_subs[subreddit_name]
         sheet_id = monitored_sub.sheet_id
         sheet_name = monitored_sub.sheet_name
-
-        values = [[location, time_seen]]
 
         self.append_to_sheet_helper(sheet_id, sheet_name, values)
         
