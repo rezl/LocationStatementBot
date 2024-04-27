@@ -1,4 +1,5 @@
 import calendar
+import gc
 import re
 import traceback
 from datetime import datetime, timedelta
@@ -21,25 +22,35 @@ class Janitor:
         adjusted_utc_dt = datetime.utcnow() - timedelta(minutes=time_difference_mins)
         return calendar.timegm(adjusted_utc_dt.utctimetuple())
 
-    def fetch_new_posts(self, subreddit, settings):
+    def handle_new_posts(self, subreddit, settings):
         check_posts_after_utc = self.get_adjusted_utc_timestamp(settings.post_check_threshold_mins)
 
-        submissions = list()
         consecutive_old = 0
         # posts are provided in order of: newly submitted/approved (from automod block)
         for post in subreddit.new():
+            # force gc to clean up previous post, if it existed, because ain't nobody got money for fly.io memory
+            gc.collect()
             if post.created_utc > check_posts_after_utc:
-                submissions.append(Post(post))
+                wrapped_post = Post(post)
+                print(f"Checking post: {wrapped_post.submission.title}\n\t{wrapped_post.submission.permalink}")
+
+                try:
+                    self.handle_location(wrapped_post, subreddit, settings)
+                except Exception as e:
+                    message = f"Exception when handling post " \
+                              f"{wrapped_post.submission.title}: {e}\n```{traceback.format_exc()}```"
+                    self.discord_client.send_error_msg(message)
+                    print(message)
+
                 consecutive_old = 0
             # old, approved posts can show up in new amongst truly new posts due to reddit "new" ordering
             # continue checking new until consecutive_old_posts are checked, to account for these posts
             else:
-                submissions.append(Post(post))
                 consecutive_old += 1
 
             if consecutive_old > settings.consecutive_old_posts:
-                return submissions
-        return submissions
+                return
+        return
 
     @staticmethod
     def validate_location_statement(location_statement):
@@ -116,17 +127,7 @@ class Janitor:
 
     def handle_posts(self, subreddit):
         settings = self.settings_map[subreddit.display_name]
-        posts = self.fetch_new_posts(subreddit, settings)
-        print("Checking " + str(len(posts)) + " posts")
-        for post in posts:
-            print(f"Checking post: {post.submission.title}\n\t{post.submission.permalink}")
-
-            try:
-                self.handle_location(post, subreddit, settings)
-            except Exception as e:
-                message = f"Exception when handling post {post.submission.title}: {e}\n```{traceback.format_exc()}```"
-                self.discord_client.send_error_msg(message)
-                print(message)
+        self.handle_new_posts(subreddit, settings)
 
 
 class LocationStatementState(str, Enum):
