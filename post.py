@@ -13,7 +13,7 @@ class Post:
         flair = self.submission.link_flair_text
         if not flair:
             return False
-        if flair.lower() in settings.sightings_flair:
+        if flair.lower() in [x.lower() for x in settings.sightings_flair]:
             return True
         return False
 
