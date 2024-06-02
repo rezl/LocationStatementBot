@@ -122,8 +122,9 @@ class Janitor:
             # sql injection?
             location = re.search(r'location: *(.*)\n', location_statement, re.IGNORECASE).group(1)
             time_seen = re.search(r'time: *(.*)\n', location_statement, re.IGNORECASE).group(1)
-            created = post.created_time
-            sheet_values = [[location, time_seen, created, post.submission.permalink]]
+            dt_utc = datetime.utcfromtimestamp(post.created_time)
+            formatted_dt = dt_utc.isoformat().replace('T', ' ')
+            sheet_values = [[location, time_seen, formatted_dt, post.submission.permalink]]
             self.google_sheets_recorder.append_to_sheet(subreddit.display_name, sheet_values)
         else:
             raise RuntimeError(f"\tUnsupported location_statement_state: {location_statement_state}")
