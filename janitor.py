@@ -119,12 +119,11 @@ class Janitor:
             # and 'saved' content does not need further processing
             self.reddit_handler.save_content(post.submission)
             print("\tPost has valid location statement")
-            # sql injection?
             location = re.search(r'location: *(.*)\n', location_statement, re.IGNORECASE).group(1)
             time_seen = re.search(r'time: *(.*)\n', location_statement, re.IGNORECASE).group(1)
-            dt_utc = datetime.utcfromtimestamp(post.created_time)
+            dt_utc = datetime.utcfromtimestamp(post.submission.created_utc)
             formatted_dt = dt_utc.isoformat().replace('T', ' ')
-            sheet_values = [[location, time_seen, formatted_dt, post.submission.permalink]]
+            sheet_values = [[location, time_seen, formatted_dt, f"https://www.reddit.com{post.submission.permalink}"]]
             self.google_sheets_recorder.append_to_sheet(subreddit.display_name, sheet_values)
         else:
             raise RuntimeError(f"\tUnsupported location_statement_state: {location_statement_state}")
