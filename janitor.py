@@ -38,7 +38,7 @@ class Janitor:
                     self.handle_location(wrapped_post, subreddit, settings)
                 except Exception as e:
                     message = f"Exception when handling post " \
-                              f"{wrapped_post.submission.title}: {e}\n```{traceback.format_exc()}```"
+                              f"{wrapped_post.submission.title},{wrapped_post.submission.permalink}: {e}\n```{traceback.format_exc()}```"
                     self.discord_client.send_error_msg(message)
                     print(message)
 
