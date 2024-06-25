@@ -31,26 +31,30 @@ class Janitor:
             # force gc to clean up previous post, if it existed, because ain't nobody got money for fly.io memory
             gc.collect()
             if post.created_utc > check_posts_after_utc:
-                wrapped_post = Post(post)
-                print(f"Checking post: {wrapped_post.submission.title}\n\t{wrapped_post.submission.permalink}")
-
-                try:
-                    self.handle_location(wrapped_post, subreddit, settings)
-                except Exception as e:
-                    message = f"Exception when handling post " \
-                              f"{wrapped_post.submission.title},{wrapped_post.submission.permalink}: {e}\n```{traceback.format_exc()}```"
-                    self.discord_client.send_error_msg(message)
-                    print(message)
-
+                self.handle_post(post, subreddit, settings)
                 consecutive_old = 0
             # old, approved posts can show up in new amongst truly new posts due to reddit "new" ordering
             # continue checking new until consecutive_old_posts are checked, to account for these posts
             else:
+                self.handle_post(post, subreddit, settings)
                 consecutive_old += 1
 
             if consecutive_old > settings.consecutive_old_posts:
                 return
         return
+
+    def handle_post(self, post, subreddit, settings):
+        wrapped_post = Post(post)
+        print(f"Checking post: {wrapped_post.submission.title}\n\t{wrapped_post.submission.permalink}")
+
+        try:
+            self.handle_location(wrapped_post, subreddit, settings)
+        except Exception as e:
+            message = f"Exception when handling post " \
+                      f"{wrapped_post.submission.title},{wrapped_post.submission.permalink}: " \
+                      f"{e}\n```{traceback.format_exc()}```"
+            self.discord_client.send_error_msg(message)
+            print(message)
 
     @staticmethod
     def validate_location_statement(location_statement):
@@ -129,7 +133,7 @@ class Janitor:
             raise RuntimeError(f"\tUnsupported location_statement_state: {location_statement_state}")
 
     def handle_posts(self, subreddit):
-        settings = self.settings_map[subreddit.display_name]
+        settings = self.settings_map[subreddit.display_name.lower()]
         self.handle_new_posts(subreddit, settings)
 
 

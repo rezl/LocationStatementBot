@@ -53,7 +53,7 @@ if __name__ == "__main__":
                 print(f"Creating Subreddit: {subreddit_name} with {type(settings).__name__} settings")
                 subreddit = reddit.subreddit(subreddit_name)
                 subreddits.append(subreddit)
-                settings_map[subreddit.display_name] = settings
+                settings_map[subreddit.display_name.lower()] = settings
                 google_sheets_recorder.add_sheet_for_sub(subreddit_name,
                                                          settings.google_sheet_id, settings.google_sheet_name)
 
