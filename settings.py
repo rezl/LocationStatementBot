@@ -23,11 +23,7 @@ class Settings:
                          "\n\n"
                          "This is a bot. Replies will not receive responses. "
                          "Please message the moderators if you feel this was an error."
-                        "\n\n"
-                        "__NEW__: In an effort to reduce toxicity by bots, trolls and bad faith actors, we will be implementing a more rigorous enforcement of the subreddit rules. Read more about this [HERE] (https://www.reddit.com/r/UFOs/comments/1fsv01j/important_notice_in_response_to_overwhelming/)"
-                        "Please read the rules and understand the subreddit topic(s) listed in the sidebar before posting or commenting. Any content removal or further moderator action is established by these rules as well as Reddit ToS."
-                        "This subreddit is primarily for the discussion of UFOs. Our hope is to foster an environment free of hostility and ridicule where we may explore the phenomenon together, from all sides of the spectrum."
-                        "*I am a bot, and this action was performed automatically. Please [contact the moderators of this subreddit](/message/compose/?to=/r/UFOs) if you have any questions or concerns.*")
+                        "\n\n")
 
     google_sheet_id = "1Ewy0BZxaafdWulW7Vd8NQCA6u7OJ0-gCYIPeTDNgmZA"
     google_sheet_name = "Sightings"
