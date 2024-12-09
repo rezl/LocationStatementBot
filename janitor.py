@@ -61,8 +61,8 @@ class Janitor:
         if not location_statement:
             return LocationStatementState.MISSING
         try:
-            location = re.search(r'location: *(.*)\n', location_statement, re.IGNORECASE).group(1)
-            time_seen = re.search(r'time: *(.*)\n', location_statement, re.IGNORECASE).group(1)
+            location = re.search(r'location*(.*)\n', location_statement, re.IGNORECASE).group(1)
+            time_seen = re.search(r'time*(.*)\n', location_statement, re.IGNORECASE).group(1)
         except Exception as e:
             print(f"Exception {e} during keyword parsing. Marking invalid.")
             return LocationStatementState.INVALID
