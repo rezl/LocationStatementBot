@@ -17,7 +17,7 @@ class Settings:
     sightings_flair = ["Sighting"]
     ls_removal_reason = ("Your post has been removed for not including a sighting info,"
                          "You must resubmit your sighting post with the text Time: and Location: on separate lines like this:\n\n"
-                         "Time: <date and time>\n"
+                         "Time: <date and time>\n\n"
                          "Location: <location of sighting>\n\n"
                          "This is a bot. Replies will not receive responses. "
                          "Please message the moderators if you feel this was an error."
