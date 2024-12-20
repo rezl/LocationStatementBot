@@ -15,10 +15,10 @@ class Settings:
     location_statement_time_limit_mins = 30
 
     sightings_flair = ["Sighting"]
-    ls_removal_reason = ("Your post has been removed for not including the **location** and **time** of the sighting in the proper format.\n "
-                         "You must submit your sighting post with the text **Location:** and **Time:** on separate lines like this:\n\n"
-                         "**Location:** *<location of sighting>*\n\n"
-                         "**Time:** *<date and time>*\n\n"
+    ls_removal_reason = ("Your post has been removed for not including the **time** and **location** of the sighting in the proper format.\n "
+                         "You must submit your sighting post with the text **Time:** and **Location:** on separate lines like this:\n\n"
+                         "Time: *date and time*\n\n"
+                         "Location: *location of sighting*\n\n"
                          "This is a bot. Replies will not receive responses.\n "
                          "Please message the moderators if you feel this was an error."
                         "\n\n")
