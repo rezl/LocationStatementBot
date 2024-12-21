@@ -60,7 +60,7 @@ class Janitor:
     def validate_location_statement(location_statement):
         if not location_statement:
             return LocationStatementState.MISSING
-        if "location" not in location_statement or "time" not in location_statement:
+        if "location" not in location_statement.lower() or "time" not in location_statement.lower():
             return LocationStatementState.MISSING
         try:
             location = re.search(r'location: *(.*)$', location_statement, re.IGNORECASE).group(1)
