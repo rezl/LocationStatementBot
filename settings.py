@@ -7,7 +7,7 @@ class Settings:
     is_dry_run = False
     post_check_frequency_mins = 5
 
-    report_location_statement_timeout = True
+    report_location_statement_timeout = False
 
     post_check_threshold_mins = 2 * 60
     consecutive_old_posts = 5
