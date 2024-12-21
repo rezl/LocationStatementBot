@@ -63,8 +63,8 @@ class Janitor:
         if "location" not in location_statement.lower() or "time" not in location_statement.lower():
             return LocationStatementState.MISSING
         try:
-            location = re.search(r'location: *(.*)$', location_statement, re.IGNORECASE).group(1)
-            time_seen = re.search(r'time: *(.*)$', location_statement, re.IGNORECASE).group(1)
+            location = Janitor.get_location_capture(location_statement)
+            time_seen = Janitor.get_time_capture(location_statement)
         except Exception as e:
             print(f"Exception {e} during keyword parsing. Marking invalid.")
             return LocationStatementState.INVALID
@@ -72,6 +72,14 @@ class Janitor:
             return LocationStatementState.INVALID
         else:
             return LocationStatementState.VALID
+
+    @staticmethod
+    def get_location_capture(location_statement):
+        return re.search(r'location: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
+
+    @staticmethod
+    def get_time_capture(location_statement):
+        return re.search(r'time: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
 
     def handle_location(self, post, subreddit, settings):
         if not post.has_sightings_flair(settings):
@@ -125,8 +133,8 @@ class Janitor:
             # and 'saved' content does not need further processing
             self.reddit_handler.save_content(post.submission)
             print("\tPost has valid location statement")
-            location = re.search(r'location: *(.*)$', location_statement, re.IGNORECASE).group(1)
-            time_seen = re.search(r'time: *(.*)$', location_statement, re.IGNORECASE).group(1)
+            location = Janitor.get_location_capture(location_statement)
+            time_seen = Janitor.get_time_capture(location_statement)
             dt_utc = datetime.utcfromtimestamp(post.submission.created_utc)
             formatted_dt = dt_utc.isoformat().replace('T', ' ')
             sheet_values = [[location, time_seen, formatted_dt, f"https://www.reddit.com{post.submission.permalink}"]]
