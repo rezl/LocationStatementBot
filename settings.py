@@ -19,6 +19,7 @@ class Settings:
                          "You must submit your sighting post with the text **Time:** and **Location:** on separate lines like this:\n\n"
                          "\"Time: *date and time*\n\n"
                          "Location: *location of sighting*\"\n\n"
+                         "This will add your sighting to the [r/UFOs Sighting Reports](https://docs.google.com/spreadsheets/d/1Ewy0BZxaafdWulW7Vd8NQCA6u7OJ0-gCYIPeTDNgmZA/edit?usp=sharing) list.\n\n"
                          "This is a bot. Replies will not receive responses.\n "
                          "Please message the moderators if you feel this was an error."
                         "\n\n")
