@@ -75,11 +75,13 @@ class Janitor:
 
     @staticmethod
     def get_location_capture(location_statement):
-        return re.search(r'location: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
+        # added \s? to optionally support zero or ones spaces before the colon
+        return re.search(r'location\s?: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
 
     @staticmethod
     def get_time_capture(location_statement):
-        return re.search(r'time: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
+        # added \s? to optionally support zero or ones spaces before the colon
+        return re.search(r'time\s?: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
 
     def handle_location(self, post, subreddit, settings):
         if not post.has_sightings_flair(settings):
