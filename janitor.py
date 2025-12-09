@@ -414,9 +414,9 @@ class Janitor:
         
         # Apply flair
         if settings.auto_flair_dry_run:
-            print(f"\t[Auto-flair] DRY RUN - Would flair as '{settings.auto_flair_text}': {reason}")
+            print(f"\t[Auto-flair] DRY RUN - Would flair as 'Sighting': {reason}")
             self.discord_client.send_action_msg(
-                f"[DRY RUN] Would auto-flair as **{settings.auto_flair_text}**:\n"
+                f"[DRY RUN] Would auto-flair as **Sighting**:\n"
                 f"**Title:** {post.submission.title}\n"
                 f"**Reason:** {reason}\n"
                 f"**Link:** https://reddit.com{post.submission.permalink}"
@@ -424,11 +424,11 @@ class Janitor:
             return True
         else:
             try:
-                # Apply the flair
-                post.submission.flair.select(flair_text=settings.auto_flair_text)
-                print(f"\t[Auto-flair] Applied '{settings.auto_flair_text}' flair: {reason}")
+                # Apply the flair using template ID
+                post.submission.flair.select(flair_template_id=settings.auto_flair_template_id)
+                print(f"\t[Auto-flair] Applied 'Sighting' flair: {reason}")
                 self.discord_client.send_action_msg(
-                    f"Auto-flaired as **{settings.auto_flair_text}**:\n"
+                    f"Auto-flaired as **Sighting**:\n"
                     f"**Title:** {post.submission.title}\n"
                     f"**Reason:** {reason}\n"
                     f"**Link:** https://reddit.com{post.submission.permalink}"
