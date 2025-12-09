@@ -344,13 +344,16 @@ class Janitor:
         - Time/Date: 8pm 12/5/24
         - **Time:** 8pm (markdown bold)
         - *Date:* December 5 (markdown italic)
+        - Time & Date: 8pm 12/5/24 (ampersand)
+        - Date and Time: 12/5/24 8pm (and)
         
         Returns: The captured time/date string, or None if no match
         """
-        # Pattern handles: time, date, when, date/time, time/date (with optional markdown)
+        # Pattern handles: time, date, when, date/time, time/date, time & date, etc. (with optional markdown)
         # Uses lookahead to stop capture at Location/Where keyword (for single-line entries)
         # [ \t]*\*{0,2}[ \t]* handles markdown asterisks after the separator
-        pattern = r'\*{0,2}(?:time|date(?:/time)?|time/date|when)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*(.+?)(?=[ \t]*\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
+        # The (?:\s*(?:&|/|and)\s*(?:date|time))? handles optional "& date", "/ time", "and date", etc.
+        pattern = r'\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*(.+?)(?=[ \t]*\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
         
         match = re.search(pattern, location_statement, re.IGNORECASE)
         if match:
