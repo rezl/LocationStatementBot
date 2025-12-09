@@ -34,6 +34,10 @@ class DiscordClient(commands.Bot):
         if self.error_channel:
             asyncio.run_coroutine_threadsafe(self.error_channel.send(full_message), self.loop)
 
+    def send_action_msg(self, message):
+        if self.error_channel:
+            asyncio.run_coroutine_threadsafe(self.error_channel.send(message), self.loop)
+
     def add_commands(self):
         @self.command(name="ping", description="lol")
         async def ping(ctx):
