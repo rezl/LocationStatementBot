@@ -38,7 +38,7 @@ auto_flair_enabled = True
 auto_flair_dry_run = True  # SET TO FALSE WHEN READY
 
 # Flair text to apply
-auto_flair_text = "Sighting"
+auto_flair_template_id = "de39d1a0-05e8-11ef-91aa-9a3acca53f53"  # Sighting flair
 
 # Media domains (required for auto-flair)
 auto_flair_media_domains = {
@@ -95,3 +95,15 @@ VALID? ──→ Pass, add to database
       │
 INCOMPLETE? ──→ Wait 30 min, then remove if not fixed
 ```
+
+## Files changed
+
+- **janitor.py**: Added `should_auto_flair()`, `handle_auto_flair()`, `is_media_domain()`, modified `handle_post()`
+- **settings.py**: Added auto-flair settings
+
+## Deployment
+
+1. Deploy with `auto_flair_dry_run = True`
+2. Monitor Discord for "[DRY RUN]" messages
+3. Verify it's detecting the right posts
+4. Set `auto_flair_dry_run = False` to go live
