@@ -24,10 +24,10 @@ class Settings:
     auto_flair_enabled = True
     
     # Dry run mode - logs what would be flaired without actually flairing
-    auto_flair_dry_run = False
+    auto_flair_dry_run = True
     
-    # The flair text to apply (must match an existing flair in the subreddit)
-    auto_flair_text = "Sighting"
+    # The flair template ID to apply (from r/UFOs post flair settings)
+    auto_flair_template_id = "de39d1a0-05e8-11ef-91aa-9a3acca53f53"
     
     # Domains to exclude from auto-flairing (news sites, etc.)
     auto_flair_excluded_domains = {
