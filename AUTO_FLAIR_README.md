@@ -1,109 +1,271 @@
-# Auto-Flair Feature
+# LocationStatementBot - Sighting Post Validation
 
-## What it does
+## Overview
 
-Automatically applies "Sighting" flair to video/image posts that have Time/Location fields, so users don't have to manually flair their posts. Even if the data is incomplete, the post gets flaired and the user has 30 minutes to fix it.
+This bot enforces sighting post requirements on r/UFOs by:
+1. **Auto-flairing** media posts that have Time/Location fields
+2. **Validating** that Sighting posts have proper Time and Location info
+3. **Warning** users with a pinned comment if info is missing/incomplete
+4. **Removing** posts that aren't fixed within 30 minutes
 
-## How it works
+---
 
-When a new post comes in without Sighting flair:
+## Full Logic Flow
 
-1. Check if it's a media post (video/image) → Skip if not
-2. Check if domain is excluded (news sites) → Skip if yes
-3. Check if post has Time/Location fields (even incomplete) → Skip if no fields at all
-4. Apply "Sighting" flair
-5. LocationStatementBot validates on next cycle, gives user 30 min to fix if incomplete
+```
+Every 5 minutes, bot checks posts up to 2 hours old:
 
-## Criteria
+FOR EACH POST
+     │
+     ▼
+┌─────────────────────────────┐
+│ Has Sighting flair already? │
+└─────────────────────────────┘
+         │            │
+        NO           YES
+         │            │
+         ▼            │
+┌─────────────────┐   │
+│ AUTO-FLAIR      │   │
+│ CHECKS:         │   │
+│                 │   │
+│ • Media post?   │   │
+│ • Not news?     │   │
+│ • Has fields?   │   │
+└─────────────────┘   │
+    │         │       │
+  FAIL      PASS      │
+    │         │       │
+    ▼         ▼       │
+  SKIP    Apply       │
+          Sighting    │
+          flair       │
+            │         │
+            └────┬────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│              VALIDATE LOCATION STATEMENT                │
+│                                                         │
+│  Check in order (keep best state found):                │
+│    1. Post body                                         │
+│    2. OP comments (with "location" keyword)             │
+│    3. Title                                             │
+│                                                         │
+│  Accepts formats like:                                  │
+│    • Time: Dec 9, 2025 8pm  (with colon)                │
+│    • Time Dec 9, 2025 8pm   (without colon)             │
+│    • Date: Dec 9 Location: Phoenix                      │
+│                                                         │
+│  Returns:                                               │
+│    VALID      = Has date + time-of-day + location       │
+│    INCOMPLETE = Missing date OR time-of-day             │
+│    INVALID    = Fields found but empty                  │
+│    MISSING    = No Time:/Location: fields at all        │
+└─────────────────────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────┐
+│       VALID?                │
+└─────────────────────────────┘
+         │            │
+        YES          NO
+         │            │
+         ▼            ▼
+┌──────────────┐  ┌─────────────────────────────┐
+│ Delete any   │  │ Warning comment on post?    │
+│ old warning  │  └─────────────────────────────┘
+│ comment      │           │            │
+└──────────────┘          NO           YES
+         │                 │            │
+         ▼                 ▼            ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Save post    │  │ Post older   │  │ Post older   │
+│ Log to       │  │ than 30 min? │  │ than 30 min? │
+│ Google       │  └──────────────┘  └──────────────┘
+│ Sheets       │       │      │          │      │
+└──────────────┘      NO     YES        NO     YES
+                       │      │          │      │
+                       ▼      │          ▼      │
+                 ┌──────────┐ │    ┌──────────┐ │
+                 │ POST     │ │    │   WAIT   │ │
+                 │ WARNING  │ │    │  (next   │ │
+                 │ COMMENT  │ │    │  cycle)  │ │
+                 │ (pinned) │ │    └──────────┘ │
+                 └──────────┘ │                 │
+                       │      └────────┬────────┘
+                       ▼               │
+                     DONE              ▼
+                            ┌─────────────────────┐
+                            │ Delete warning      │
+                            │ comment             │
+                            └─────────────────────┘
+                                       │
+                                       ▼
+                            ┌─────────────────────┐
+                            │ Mod-approved?       │
+                            └─────────────────────┘
+                                  │         │
+                                 YES       NO
+                                  │         │
+                                  ▼         ▼
+                            ┌─────────┐ ┌─────────┐
+                            │ REPORT  │ │ REMOVE  │
+                            │ to mods │ │ post +  │
+                            │         │ │ removal │
+                            └─────────┘ │ comment │
+                                        └─────────┘
+```
+
+---
+
+## Validation States
+
+| State | Meaning | Example | Action |
+|-------|---------|---------|--------|
+| **VALID** | Has date + time-of-day + location | `Time: Dec 9, 2025 8pm Location: Phoenix` | ✅ Save to database |
+| **INCOMPLETE** | Missing date OR time-of-day | `Time: 8pm Location: Phoenix` (no date) | ⚠️ Warning → Remove |
+| **INVALID** | Fields found but empty | `Time: Location:` | ⚠️ Warning → Remove |
+| **MISSING** | No Time:/Location: fields | Just a description with no fields | ⚠️ Warning → Remove |
+
+---
+
+## Warning Comment
+
+When a post has issues, a **pinned comment** is posted immediately:
+
+> This post needs the required **time** and **location** info or it will be removed.
+>
+> **Issue:** [specific issue - e.g., "Missing specific date"]
+>
+> **Required format** (in post body or as a comment, each on a separate line):
+>
+> > Time: [specific date AND time of day]
+> >
+> > Location: [city, state/province, country]
+>
+> **Example:**
+>
+> > Time: December 9, 2025 at 10:30 PM
+> >
+> > Location: Phoenix, Arizona, USA
+>
+> *This comment will be automatically removed once you add the required info.*
+
+**If user fixes their post:** Warning comment is deleted, post is saved to database.
+
+**If user doesn't fix within 30 min:** Warning deleted, post removed with removal comment.
+
+---
+
+## Issue-Specific Messages
+
+| Issue | Warning Message |
+|-------|-----------------|
+| **MISSING** | "No `Time:` or `Location:` fields were found in your post." |
+| **INVALID** | "The `Time:` or `Location:` fields were found but appear to be empty." |
+| **Missing date** | "Your time field is missing a **specific date**. Please include an actual date like `December 7th` or `12/7/24`" |
+| **Missing time** | "Your time field is missing the **time of day**. Please add a time like `8pm`, `20:00`, or even `evening`" |
+| **Missing both** | "Your time field is missing both a **specific date** and **time of day**." |
+
+---
+
+## Auto-Flair Feature
+
+Automatically applies "Sighting" flair to media posts that have Time/Location fields.
+
+### Criteria
 
 ```
 Auto-flair IF ALL:
-  ✓ Media post (v.redd.it, i.redd.it, imgur, youtube)
-  ✓ NOT a news domain
+  ✓ Media post (v.redd.it, i.redd.it, imgur, youtube, galleries)
+  ✓ NOT a news domain (yahoo, cnn, bbc, etc.)
   ✓ Has Time/Location fields (even if incomplete)
 ```
 
-**What happens after auto-flair:**
-- VALID data → passes immediately, added to sightings database
-- INCOMPLETE data → user has 30 min to fix, gets specific error message
-- No fix after 30 min → removed with explanation
-
-## Settings (settings.py)
+### Settings
 
 ```python
 # Enable/disable auto-flair
 auto_flair_enabled = True
 
-# Dry run - logs what would be flaired without actually doing it
-auto_flair_dry_run = True  # SET TO FALSE WHEN READY
+# Dry run mode - logs without actually flairing
+auto_flair_dry_run = False
 
-# Flair text to apply
-auto_flair_template_id = "de39d1a0-05e8-11ef-91aa-9a3acca53f53"  # Sighting flair
+# Flair template ID (from subreddit settings)
+auto_flair_template_id = "de39d1a0-05e8-11ef-91aa-9a3acca53f53"
 
-# Media domains (required for auto-flair)
+# Media domains that trigger auto-flair
 auto_flair_media_domains = {
-    "v.redd.it", "i.redd.it", "imgur.com", ...
+    "v.redd.it", "i.redd.it", "imgur.com", "youtube.com", ...
 }
 
-# Domains to exclude (news sites won't be auto-flaired)
+# Excluded domains (news sites)
 auto_flair_excluded_domains = {
-    "yahoo.com", "cnn.com", "bbc.com", ...
+    "yahoo.com", "cnn.com", "bbc.com", "nytimes.com", ...
 }
 ```
 
-## Discord logging
+---
 
-Auto-flaired posts are logged to Discord:
+## Configuration (settings.py)
+
+```python
+# How often bot checks (minutes)
+post_check_frequency_mins = 5
+
+# How far back to check posts (minutes)
+post_check_threshold_mins = 120  # 2 hours
+
+# Time before removal (minutes)
+location_statement_time_limit_mins = 30
+
+# Flairs that trigger validation
+sightings_flair = ["Sighting"]
+
+# Report instead of remove?
+report_location_statement_timeout = False
+
+# Dry run mode (no actions taken)
+is_dry_run = False
+```
+
+---
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `janitor.py` | Main validation logic, auto-flair, warning comments |
+| `settings.py` | All configuration and message templates |
+| `discord_client.py` | Discord logging for actions and errors |
+| `bot.py` | Main loop, Reddit connection |
+| `post.py` | Post wrapper class |
+| `reddit_actions_handler.py` | Remove, report, reply actions |
+| `google_sheets_recorder.py` | Logs valid sightings to Google Sheets |
+
+---
+
+## Discord Logging
+
+Actions are logged to Discord:
 
 ```
-Auto-flaired as **Sighting**:
-**Title:** Strange lights over Phoenix
-**Reason:** Incomplete data (user has 30 min to fix) - Time: 8pm, Location: Phoenix
+Posted warning comment on post:
+**Post:** Strange lights over Phoenix...
+**Issue:** INCOMPLETE
 **Link:** https://reddit.com/r/UFOs/comments/...
 ```
 
-## Flow diagram
-
 ```
-New post arrives (video/image)
-      ↓
-Has Sighting flair? ─── Yes ──→ Run location validation
-      │
-      No
-      ↓
-Auto-flair enabled? ─── No ──→ Skip
-      │
-      Yes
-      ↓
-Media post? ─── No ──→ Skip
-      │
-      Yes
-      ↓
-Excluded domain? ─── Yes ──→ Skip
-      │
-      No
-      ↓
-Has Time/Location fields? ─── No ──→ Skip (no attempt made)
-      │
-      Yes (even if incomplete)
-      ↓
-Apply "Sighting" flair
-      ↓
-Next cycle: Validation runs
-      ↓
-VALID? ──→ Pass, add to database
-      │
-INCOMPLETE? ──→ Wait 30 min, then remove if not fixed
+User fixed their post, deleted warning comment:
+**Post:** Strange lights over Phoenix...
+**Link:** https://reddit.com/r/UFOs/comments/...
 ```
 
-## Files changed
-
-- **janitor.py**: Added `should_auto_flair()`, `handle_auto_flair()`, `is_media_domain()`, modified `handle_post()`
-- **settings.py**: Added auto-flair settings
-
-## Deployment
-
-1. Deploy with `auto_flair_dry_run = True`
-2. Monitor Discord for "[DRY RUN]" messages
-3. Verify it's detecting the right posts
-4. Set `auto_flair_dry_run = False` to go live
+```
+Auto-flaired as **Sighting**:
+**Title:** UFO over my house
+**Reason:** Valid data - Time: Dec 9 8pm, Location: Phoenix
+**Link:** https://reddit.com/r/UFOs/comments/...
+```

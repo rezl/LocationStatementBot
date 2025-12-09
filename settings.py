@@ -80,7 +80,7 @@ class Settings:
     ls_removal_reason_template = (
         "Your post has been removed because the **time** and **location** of your sighting were not included in the required format.\n\n"
         "{specific_issue}"
-        "**Required format** (in post body or as a comment):\n\n"
+        "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
         ">Location: [city, state/province, country]\n\n"
         "**Example:**\n\n"
@@ -131,6 +131,40 @@ class Settings:
     
     # Fallback for backwards compatibility
     ls_removal_reason = ls_removal_reason_template.format(specific_issue="")
+    
+    # ==========================================================================
+    # Warning comment settings (posted before removal)
+    # ==========================================================================
+    
+    # Enable/disable warning comments (if disabled, posts are removed after timeout with no prior warning)
+    warning_comment_enabled = True
+    
+    # Warning comment template - posted when post is first detected with issues
+    # {specific_issue} will be replaced with state-specific text
+    ls_warning_comment_template = (
+        "This post needs the required **time** and **location** info or it will be removed.\n\n"
+        "{specific_issue}"
+        "**Required format** (in post body or as a comment, each on a separate line):\n\n"
+        ">Time: [specific date AND time of day]\n>\n"
+        ">Location: [city, state/province, country]\n\n"
+        "**Example:**\n\n"
+        ">Time: December 9, 2025 at 10:30 PM\n>\n"
+        ">Location: Phoenix, Arizona, USA\n>\n"
+        ">I was outside walking my dog when I noticed these lights hovering silently...\n\n"
+        "A brief description of what you saw is also appreciated!\n\n"
+        "**How to fix:** If this is a text post, edit your post body. If this is a link/video/image post, add a comment with the required info.\n\n"
+        "**Additional sighting requirements:**\n\n"
+        "- Must include a detailed and descriptive eyewitness account\n"
+        "- Must have been seen with your own eyes (not found later in photos)\n"
+        "- No trail camera or doorbell camera footage\n"
+        "- No cell phone videos of content on a TV/display\n"
+        "- Imagery must be in focus most of the time\n\n"
+        "For full guidelines, see: [How to Report a Sighting](https://ufos.wiki/reports/) | [Posting Guidelines](https://reddit.com/r/UFOs/wiki/posting_guidelines) | [Investigate a Sighting](https://ufos.wiki/investigate/)\n\n"
+        "This format allows your sighting to be added to the [r/UFOs Sighting Reports database](https://docs.google.com/spreadsheets/d/1Ewy0BZxaafdWulW7Vd8NQCA6u7OJ0-gCYIPeTDNgmZA/edit?usp=sharing).\n\n"
+        "---\n"
+        "*This comment will be automatically removed once you add the required info.*"
+        "\n\n"
+    )
 
     google_sheet_id = "1Ewy0BZxaafdWulW7Vd8NQCA6u7OJ0-gCYIPeTDNgmZA"
     google_sheet_name = "Sightings"
