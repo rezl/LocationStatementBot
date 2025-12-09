@@ -64,6 +64,37 @@ def is_media_domain(domain, media_domains):
     return False
 
 
+def is_media_post(post, settings):
+    """
+    Check if a post is a media post (video/image).
+    
+    Checks:
+    - is_video flag
+    - Known media domains (v.redd.it, imgur, youtube, etc.)
+    - Reddit galleries (old.reddit.com/gallery/ or reddit.com/gallery/)
+    - is_gallery flag
+    """
+    # Check is_video flag
+    if getattr(post.submission, 'is_video', False):
+        return True
+    
+    # Check is_gallery flag (Reddit native galleries)
+    if getattr(post.submission, 'is_gallery', False):
+        return True
+    
+    # Check domain
+    domain = getattr(post.submission, 'domain', '') or ''
+    if is_media_domain(domain, settings.auto_flair_media_domains):
+        return True
+    
+    # Check for Reddit gallery URLs
+    url = getattr(post.submission, 'url', '') or ''
+    if '/gallery/' in url:
+        return True
+    
+    return False
+
+
 class Janitor:
     def __init__(self, discord_client, bot_username, reddit, reddit_handler, google_sheets_recorder, settings_map):
         self.discord_client = discord_client
@@ -341,7 +372,7 @@ class Janitor:
         
         Criteria:
         - Post does NOT already have Sighting flair
-        - Post IS a media post (video/image)
+        - Post IS a media post (video/image/gallery)
         - Post is NOT from an excluded domain (news sites)
         - Post has Time/Location fields (even if incomplete - user gets 30 min to fix)
         
@@ -351,14 +382,13 @@ class Janitor:
         if post.has_sightings_flair(settings):
             return False, "Already has Sighting flair"
         
-        # Check if it's a media post (video/image)
-        domain = getattr(post.submission, 'domain', '') or ''
-        is_video = getattr(post.submission, 'is_video', False)
-        
-        if not is_video and not is_media_domain(domain, settings.auto_flair_media_domains):
+        # Check if it's a media post (video/image/gallery)
+        if not is_media_post(post, settings):
+            domain = getattr(post.submission, 'domain', '') or ''
             return False, f"Not a media post (domain: {domain})"
         
         # Check if domain is excluded (news sites)
+        domain = getattr(post.submission, 'domain', '') or ''
         if is_excluded_domain(domain, settings.auto_flair_excluded_domains):
             return False, f"Excluded domain: {domain}"
         
