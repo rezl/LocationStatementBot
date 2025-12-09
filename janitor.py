@@ -8,6 +8,40 @@ from enum import Enum
 from post import Post
 
 
+def has_date_component(text):
+    """Check if text contains a SPECIFIC date - relative dates like 'yesterday' don't count"""
+    if not text:
+        return False
+    patterns = [
+        r'\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}',  # 12/7/24, 12-7-2024, 12.7.24
+        r'\d{1,2}[/\-\.]\d{1,2}',                 # 12/7, 12-7 (month/day without year)
+        r'(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d{1,2}',  # Dec 7, January 15
+        r'\d{1,2}(?:st|nd|rd|th)?\s*(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)',  # 7th Dec, 7 of January
+    ]
+    text_lower = text.lower()
+    for pattern in patterns:
+        if re.search(pattern, text_lower):
+            return True
+    return False
+
+
+def has_time_component(text):
+    """Check if text contains a time-of-day pattern"""
+    if not text:
+        return False
+    patterns = [
+        r'\d{1,2}:\d{2}',                         # 8:30, 20:00
+        r'\d{1,2}\s*(?:am|pm|a\.m\.|p\.m\.)',     # 8pm, 8 PM, 8 a.m.
+        r'(?:morning|afternoon|evening|night|midnight|noon|dusk|dawn)',  # descriptive times
+        r'around\s+\d{1,2}(?!\s*(?:th|st|nd|rd))',  # around 8 (but not "around 8th" which is a date)
+    ]
+    text_lower = text.lower()
+    for pattern in patterns:
+        if re.search(pattern, text_lower):
+            return True
+    return False
+
+
 class Janitor:
     def __init__(self, discord_client, bot_username, reddit, reddit_handler, google_sheets_recorder, settings_map):
         self.discord_client = discord_client
@@ -58,30 +92,212 @@ class Janitor:
 
     @staticmethod
     def validate_location_statement(location_statement):
+        """
+        Validates that a location statement contains properly formatted Time and Location fields.
+        
+        Returns:
+            LocationStatementState.VALID - Both Time/Date and Location found with complete content
+            LocationStatementState.MISSING - Required fields not found at all
+            LocationStatementState.INVALID - Fields found but empty or malformed
+            LocationStatementState.INCOMPLETE - Fields found but Time is missing date or time-of-day
+        """
         if not location_statement:
             return LocationStatementState.MISSING
-        if "location" not in location_statement.lower() or "time" not in location_statement.lower():
+        
+        # Try to extract time and location using improved patterns
+        time_result = Janitor.get_time_capture(location_statement)
+        location_result = Janitor.get_location_capture(location_statement)
+        
+        # Also check for split fields (e.g., separate Date: and Time: lines)
+        all_datetime_content = Janitor.get_all_datetime_content(location_statement)
+        
+        # Debug logging to help diagnose issues
+        print(f"\t[Validation] Time field: '{time_result}' | Location field: '{location_result}'")
+        if all_datetime_content != time_result:
+            print(f"\t[Validation] Combined date/time content: '{all_datetime_content}'")
+        
+        # Check if either field is completely missing (no match at all)
+        if time_result is None and location_result is None:
+            print(f"\t[Validation] MISSING - Neither Time nor Location field found")
             return LocationStatementState.MISSING
-        try:
-            location = Janitor.get_location_capture(location_statement)
-            time_seen = Janitor.get_time_capture(location_statement)
-        except Exception as e:
-            print(f"Exception {e} during keyword parsing. Marking invalid.")
+        
+        if time_result is None:
+            print(f"\t[Validation] MISSING - No Time/Date field found")
+            return LocationStatementState.MISSING
+            
+        if location_result is None:
+            print(f"\t[Validation] MISSING - No Location field found")
+            return LocationStatementState.MISSING
+        
+        # Both fields exist, check if they have actual content
+        time_content = time_result.strip()
+        location_content = location_result.strip()
+        
+        # Require minimum content length (avoid "Time: ?" or "Location: .")
+        min_content_length = 2
+        
+        if len(time_content) < min_content_length:
+            print(f"\t[Validation] INVALID - Time field too short or empty: '{time_content}'")
             return LocationStatementState.INVALID
-        if not location or not time_seen:
+            
+        if len(location_content) < min_content_length:
+            print(f"\t[Validation] INVALID - Location field too short or empty: '{location_content}'")
             return LocationStatementState.INVALID
+        
+        # Check that date/time content contains BOTH a date and time-of-day component
+        # Use combined content from all date/time fields (handles split Date: and Time: fields)
+        content_to_check = all_datetime_content if all_datetime_content else time_content
+        has_date = has_date_component(content_to_check)
+        has_time = has_time_component(content_to_check)
+        
+        if not has_date or not has_time:
+            missing = []
+            if not has_date:
+                missing.append("date")
+            if not has_time:
+                missing.append("time-of-day")
+            print(f"\t[Validation] INCOMPLETE - Missing: {', '.join(missing)}")
+            return LocationStatementState.INCOMPLETE
+        
+        print(f"\t[Validation] VALID - Time: '{time_content}' | Location: '{location_content}'")
+        return LocationStatementState.VALID
+
+    @staticmethod
+    def get_all_datetime_content(location_statement):
+        """
+        Extract content from ALL Time/Date/When fields and combine them.
+        This handles cases where users split info across separate Date: and Time: fields.
+        
+        Example: "Date: Dec 7th\nTime: 8pm" -> "Dec 7th 8pm"
+        """
+        if not location_statement:
+            return None
+        
+        # Pattern to find all date/time field values
+        pattern = r'\*{0,2}(?:time|date(?:/time)?|time/date|when)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*(.+?)(?=[ \t]*\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
+        
+        matches = re.findall(pattern, location_statement, re.IGNORECASE)
+        
+        if not matches:
+            return None
+        
+        # Combine all captured values, clean up each one
+        combined_parts = []
+        for match in matches:
+            cleaned = match.strip()
+            cleaned = re.sub(r'^\*+\s*', '', cleaned)
+            cleaned = re.sub(r'\s*\*+$', '', cleaned)
+            if cleaned:
+                combined_parts.append(cleaned)
+        
+        return ' '.join(combined_parts) if combined_parts else None
+
+    @staticmethod
+    def build_removal_reason(location_statement, state, settings):
+        """
+        Build a state-specific removal reason message.
+        
+        Args:
+            location_statement: The text that was checked (for re-analyzing what's missing)
+            state: The LocationStatementState
+            settings: Settings object with message templates
+            
+        Returns:
+            String with the appropriate removal reason for the user
+        """
+        # Determine the specific issue based on state
+        if state == LocationStatementState.MISSING:
+            specific_issue = settings.ls_issue_missing
+        elif state == LocationStatementState.INVALID:
+            specific_issue = settings.ls_issue_invalid
+        elif state == LocationStatementState.INCOMPLETE:
+            # For INCOMPLETE, figure out what specifically is missing
+            time_result = Janitor.get_time_capture(location_statement) if location_statement else None
+            if time_result:
+                has_date = has_date_component(time_result)
+                has_time = has_time_component(time_result)
+                
+                if not has_date and not has_time:
+                    specific_issue = settings.ls_issue_incomplete_neither
+                elif not has_date:
+                    specific_issue = settings.ls_issue_incomplete_no_date
+                elif not has_time:
+                    specific_issue = settings.ls_issue_incomplete_no_time
+                else:
+                    # Shouldn't happen, but fallback
+                    specific_issue = settings.ls_issue_incomplete_neither
+            else:
+                specific_issue = settings.ls_issue_incomplete_neither
         else:
-            return LocationStatementState.VALID
+            # Fallback - shouldn't happen for removal cases
+            specific_issue = ""
+        
+        return settings.ls_removal_reason_template.format(specific_issue=specific_issue)
 
     @staticmethod
     def get_location_capture(location_statement):
-        # added \s? to optionally support zero or ones spaces before the colon
-        return re.search(r'location\s?: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
+        """
+        Extract location value from statement. Handles various formats:
+        - Location: somewhere (standard)
+        - Where: somewhere (natural alternative)
+        - Location- somewhere (hyphen instead of colon)
+        - Location— somewhere (em dash from mobile keyboards)
+        - Location– somewhere (en dash)
+        - Locaiton: somewhere (common typo)
+        - **Location:** somewhere (markdown bold)
+        - *Location:* somewhere (markdown italic)
+        
+        Returns: The captured location string, or None if no match
+        """
+        # Pattern breakdown:
+        # \*{0,2} - Optional markdown bold/italic (0-2 asterisks)
+        # (?:location|...|where) - keyword variants and typos
+        # \*{0,2} - Optional closing markdown
+        # [ \t]* - Horizontal whitespace only (no newlines)
+        # [:\-\—\–] - Colon, hyphen, em dash, or en dash as separator
+        # [ \t]*\*{0,2}[ \t]* - Whitespace and optional markdown after separator
+        # ([^\n]+) - Capture one or more non-newline characters
+        pattern = r'\*{0,2}(?:location|locaiton|loaction|locaton|where)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*([^\n]+)'
+        
+        match = re.search(pattern, location_statement, re.IGNORECASE)
+        if match:
+            result = match.group(1).strip()
+            # Remove leading/trailing markdown asterisks from captured content
+            result = re.sub(r'^\*+\s*', '', result)  # Leading asterisks
+            result = re.sub(r'\s*\*+$', '', result)  # Trailing asterisks
+            return result.strip() if result.strip() else None
+        return None
 
     @staticmethod
     def get_time_capture(location_statement):
-        # added \s? to optionally support zero or ones spaces before the colon
-        return re.search(r'time\s?: *(.*)$', location_statement, re.MULTILINE | re.IGNORECASE).group(1)
+        """
+        Extract time/date value from statement. Handles various formats:
+        - Time: 8pm (standard)
+        - When: 8pm (natural alternative)
+        - Time- 8pm (hyphen instead of colon)
+        - Time— 8pm (em dash from mobile keyboards)
+        - Time– 8pm (en dash)
+        - Date: December 5, 2024
+        - Date/Time: 12/5/24 8pm
+        - Time/Date: 8pm 12/5/24
+        - **Time:** 8pm (markdown bold)
+        - *Date:* December 5 (markdown italic)
+        
+        Returns: The captured time/date string, or None if no match
+        """
+        # Pattern handles: time, date, when, date/time, time/date (with optional markdown)
+        # Uses lookahead to stop capture at Location/Where keyword (for single-line entries)
+        # [ \t]*\*{0,2}[ \t]* handles markdown asterisks after the separator
+        pattern = r'\*{0,2}(?:time|date(?:/time)?|time/date|when)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*(.+?)(?=[ \t]*\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
+        
+        match = re.search(pattern, location_statement, re.IGNORECASE)
+        if match:
+            result = match.group(1).strip()
+            # Remove leading/trailing markdown asterisks from captured content
+            result = re.sub(r'^\*+\s*', '', result)  # Leading asterisks
+            result = re.sub(r'\s*\*+$', '', result)  # Trailing asterisks
+            return result.strip() if result.strip() else None
+        return None
 
     def handle_location(self, post, subreddit, settings):
         if not post.has_sightings_flair(settings):
@@ -92,21 +308,41 @@ class Janitor:
             print("Post has already been actioned - to re-action, unsave this post in the bot's account")
             return
 
-        # order of preference: post text (self post or link post), then top-level OP comment
+        # order of preference: post body, then OP comment, then title
         location_statement = ''
         location_statement_state = LocationStatementState.MISSING
-        # use link post's text if valid
+        location_statement_source = 'none'
+        
+        # 1. Check post body (selftext) first
         if post.submission.selftext != '':
             self_text = post.submission.selftext
+            print(f"\t[Source] Checking post selftext ({len(self_text)} chars)")
             location_statement_state = Janitor.validate_location_statement(self_text)
             if location_statement_state == LocationStatementState.VALID:
                 location_statement = self_text
+                location_statement_source = 'selftext'
 
+        # 2. If selftext didn't have valid statement, check OP comments
         if not location_statement:
-            location_statement = post.find_location_statement()
-        if hasattr(location_statement, "body"):
-            location_statement_state = Janitor.validate_location_statement(location_statement.body)
-            location_statement = location_statement.body
+            print(f"\t[Source] Checking OP comments for location statement")
+            comment_statement = post.find_location_statement()
+            if comment_statement and hasattr(comment_statement, "body"):
+                print(f"\t[Source] Found OP comment ({len(comment_statement.body)} chars)")
+                location_statement_state = Janitor.validate_location_statement(comment_statement.body)
+                if location_statement_state == LocationStatementState.VALID:
+                    location_statement = comment_statement.body
+                    location_statement_source = 'comment'
+            else:
+                print(f"\t[Source] No OP comment with 'location' keyword found")
+
+        # 3. If still no valid statement, check title
+        if not location_statement:
+            title = post.submission.title
+            print(f"\t[Source] Checking post title: '{title}'")
+            location_statement_state = Janitor.validate_location_statement(title)
+            if location_statement_state == LocationStatementState.VALID:
+                location_statement = title
+                location_statement_source = 'title'
 
         timeout_mins = settings.location_statement_time_limit_mins
 
@@ -117,24 +353,26 @@ class Janitor:
         print("\tTime has expired")
 
         if location_statement_state == LocationStatementState.MISSING or \
-                location_statement_state == LocationStatementState.INVALID:
-            print(f"\tPost has {location_statement_state} location statement")
+                location_statement_state == LocationStatementState.INVALID or \
+                location_statement_state == LocationStatementState.INCOMPLETE:
+            print(f"\tPost has {location_statement_state} location statement (source: {location_statement_source})")
             if post.is_moderator_approved():
                 self.reddit_handler.report_content(post.submission,
-                                                   f"Moderator approved post, but is a {location_statement_state}"
-                                                   f" location statement. Please look.")
+                                                   f"Moderator approved post, but has {location_statement_state}"
+                                                   f" location statement (checked: {location_statement_source}). Please look.")
             elif settings.report_location_statement_timeout:
                 self.reddit_handler.report_content(post.submission,
                                                    f"Post has a {location_statement_state} location statement "
-                                                   f"after timeout. Please look.")
+                                                   f"after timeout (checked: {location_statement_source}). Please look.")
             else:
-                self.reddit_handler.remove_content(post.submission, settings.ls_removal_reason,
+                removal_reason = Janitor.build_removal_reason(location_statement, location_statement_state, settings)
+                self.reddit_handler.remove_content(post.submission, removal_reason,
                                                    f"{location_statement_state} location statement")
         elif location_statement_state == LocationStatementState.VALID:
             # we 'save' the submission on reddit so the bot knows which posts it's already recorded
             # and 'saved' content does not need further processing
             self.reddit_handler.save_content(post.submission)
-            print("\tPost has valid location statement")
+            print(f"\tPost has valid location statement (source: {location_statement_source})")
             location = Janitor.get_location_capture(location_statement)
             time_seen = Janitor.get_time_capture(location_statement)
             dt_utc = datetime.utcfromtimestamp(post.submission.created_utc)
@@ -152,4 +390,5 @@ class Janitor:
 class LocationStatementState(str, Enum):
     MISSING = "MISSING"
     INVALID = "INVALID"
+    INCOMPLETE = "INCOMPLETE"
     VALID = "VALID"
