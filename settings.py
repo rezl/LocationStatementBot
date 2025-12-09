@@ -16,18 +16,88 @@ class Settings:
 
     sightings_flair = ["Sighting"]
     
+    # ==========================================================================
+    # Auto-flair settings
+    # ==========================================================================
+    
+    # Enable/disable auto-flair feature
+    auto_flair_enabled = True
+    
+    # Dry run mode - logs what would be flaired without actually flairing
+    auto_flair_dry_run = False
+    
+    # The flair template ID to apply (from r/UFOs post flair settings)
+    auto_flair_template_id = "de39d1a0-05e8-11ef-91aa-9a3acca53f53"
+    
+    # Domains to exclude from auto-flairing (news sites, etc.)
+    auto_flair_excluded_domains = {
+        # Major news sites
+        "yahoo.com", "news.yahoo.com", "uk.news.yahoo.com",
+        "cnn.com", "bbc.com", "bbc.co.uk",
+        "nytimes.com", "washingtonpost.com",
+        "theguardian.com", "reuters.com",
+        "foxnews.com", "nbcnews.com", "cbsnews.com",
+        "dailymail.co.uk", "nypost.com",
+        "vice.com", "huffpost.com",
+        "abc.com", "abcnews.go.com",
+        "apnews.com", "bloomberg.com",
+        "businessinsider.com", "cnbc.com",
+        "forbes.com", "independent.co.uk",
+        "latimes.com", "msnbc.com",
+        "newsweek.com", "politico.com",
+        "sky.com", "news.sky.com",
+        "thehill.com", "usatoday.com", "wired.com",
+        # UFO/paranormal news sites (articles, not sightings)
+        "thedebrief.org", "liberationtimes.com",
+        "dailygrail.com", "mysteriousuniverse.org",
+        "unknowncountry.com",
+        # Blogs/newsletters
+        "substack.com", "open.substack.com",
+        "medium.com",
+        # Social media (external links)
+        "twitter.com", "x.com",
+        "facebook.com", "tiktok.com", "instagram.com",
+        # Podcasts/video platforms (not direct uploads)
+        "podcasts.apple.com", "spotify.com", "rumble.com",
+    }
+    
+    # Domains that indicate media posts (required for auto-flair)
+    auto_flair_media_domains = {
+        "v.redd.it",
+        "i.redd.it",
+        "imgur.com",
+        "i.imgur.com",
+        "youtube.com",
+        "youtu.be",
+        "streamable.com",
+        "gfycat.com",
+        "drive.google.com",
+    }
+    
+    # ==========================================================================
+    
     # Base removal message template - {specific_issue} will be replaced with state-specific text
     ls_removal_reason_template = (
         "Your post has been removed because the **time** and **location** of your sighting were not included in the required format.\n\n"
         "{specific_issue}"
-        "You must include both fields in your post **title**, **body**, or **comment** using this format:\n\n"
+        "**Required format** (in post body or as a comment):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
         ">Location: [city, state/province, country]\n\n"
         "**Example:**\n\n"
         ">Time: December 9, 2025 at 10:30 PM\n>\n"
-        ">Location: Phoenix, Arizona, USA\n\n"
+        ">Location: Phoenix, Arizona, USA\n>\n"
+        ">I was outside walking my dog when I noticed these lights hovering silently...\n\n"
+        "A brief description of what you saw is also appreciated!\n\n"
+        "You have **30 minutes** after posting to add this info. For video/image posts, add it as a comment. "
+        "If your post has already been removed, please resubmit with the required format.\n\n"
+        "**Additional sighting requirements:**\n\n"
+        "- Must include a detailed and descriptive eyewitness account\n"
+        "- Must have been seen with your own eyes (not found later in photos)\n"
+        "- No trail camera or doorbell camera footage\n"
+        "- No cell phone videos of content on a TV/display\n"
+        "- Imagery must be in focus most of the time\n\n"
+        "For full guidelines, see: [How to Report a Sighting](https://ufos.wiki/reports/) | [Posting Guidelines](https://reddit.com/r/UFOs/wiki/posting_guidelines) | [Investigate a Sighting](https://ufos.wiki/investigate/)\n\n"
         "This format allows your sighting to be added to the [r/UFOs Sighting Reports database](https://docs.google.com/spreadsheets/d/1Ewy0BZxaafdWulW7Vd8NQCA6u7OJ0-gCYIPeTDNgmZA/edit?usp=sharing).\n\n"
-        "Please resubmit your post with the required format.\n\n"
         "---\n"
         "*This is an automated message. Please [message the moderators](https://www.reddit.com/message/compose?to=/r/UFOs) if you believe this removal was made in error.*"
         "\n\n"

@@ -42,6 +42,59 @@ def has_time_component(text):
     return False
 
 
+def is_excluded_domain(domain, excluded_domains):
+    """Check if domain is in the exclusion list (news sites, etc.)"""
+    if not domain:
+        return False
+    domain_lower = domain.lower()
+    for excluded in excluded_domains:
+        if excluded in domain_lower:
+            return True
+    return False
+
+
+def is_media_domain(domain, media_domains):
+    """Check if domain indicates a media post (video/image)"""
+    if not domain:
+        return False
+    domain_lower = domain.lower()
+    for media in media_domains:
+        if media in domain_lower:
+            return True
+    return False
+
+
+def is_media_post(post, settings):
+    """
+    Check if a post is a media post (video/image).
+    
+    Checks:
+    - is_video flag
+    - Known media domains (v.redd.it, imgur, youtube, etc.)
+    - Reddit galleries (old.reddit.com/gallery/ or reddit.com/gallery/)
+    - is_gallery flag
+    """
+    # Check is_video flag
+    if getattr(post.submission, 'is_video', False):
+        return True
+    
+    # Check is_gallery flag (Reddit native galleries)
+    if getattr(post.submission, 'is_gallery', False):
+        return True
+    
+    # Check domain
+    domain = getattr(post.submission, 'domain', '') or ''
+    if is_media_domain(domain, settings.auto_flair_media_domains):
+        return True
+    
+    # Check for Reddit gallery URLs
+    url = getattr(post.submission, 'url', '') or ''
+    if '/gallery/' in url:
+        return True
+    
+    return False
+
+
 class Janitor:
     def __init__(self, discord_client, bot_username, reddit, reddit_handler, google_sheets_recorder, settings_map):
         self.discord_client = discord_client
@@ -82,6 +135,15 @@ class Janitor:
         print(f"Checking post: {wrapped_post.submission.title}\n\t{wrapped_post.submission.permalink}")
 
         try:
+            # First, try auto-flairing if enabled and post doesn't have sighting flair
+            if settings.auto_flair_enabled and not wrapped_post.has_sightings_flair(settings):
+                auto_flaired = self.handle_auto_flair(wrapped_post, subreddit, settings)
+                if auto_flaired and not settings.auto_flair_dry_run:
+                    # Post was just flaired - let it go through normal validation on next cycle
+                    # (gives user time to add location statement if needed)
+                    return
+            
+            # Then handle location validation for posts with sighting flair
             self.handle_location(wrapped_post, subreddit, settings)
         except Exception as e:
             message = f"Exception when handling post " \
@@ -298,6 +360,122 @@ class Janitor:
             result = re.sub(r'\s*\*+$', '', result)  # Trailing asterisks
             return result.strip() if result.strip() else None
         return None
+
+    # ==========================================================================
+    # Auto-flair methods
+    # ==========================================================================
+    
+    @staticmethod
+    def should_auto_flair(post, settings):
+        """
+        Check if a post should be auto-flaired as a Sighting.
+        
+        Criteria:
+        - Post does NOT already have Sighting flair
+        - Post IS a media post (video/image/gallery)
+        - Post is NOT from an excluded domain (news sites)
+        - Post has Time/Location fields (even if incomplete - user gets 30 min to fix)
+        
+        Returns: (should_flair: bool, reason: str)
+        """
+        # Check if already has sighting flair
+        if post.has_sightings_flair(settings):
+            return False, "Already has Sighting flair"
+        
+        # Check if it's a media post (video/image/gallery)
+        if not is_media_post(post, settings):
+            domain = getattr(post.submission, 'domain', '') or ''
+            return False, f"Not a media post (domain: {domain})"
+        
+        # Check if domain is excluded (news sites)
+        domain = getattr(post.submission, 'domain', '') or ''
+        if is_excluded_domain(domain, settings.auto_flair_excluded_domains):
+            return False, f"Excluded domain: {domain}"
+        
+        # Check for Time/Location fields (even incomplete is OK - user gets 30 min to fix)
+        text_to_check = ""
+        
+        # Body (selftext)
+        if post.submission.selftext:
+            text_to_check = post.submission.selftext
+        
+        # Also include title
+        text_to_check = text_to_check + "\n" + post.submission.title
+        
+        # Validate using the same logic as location statement validation
+        location_statement_state = Janitor.validate_location_statement(text_to_check)
+        
+        if location_statement_state == LocationStatementState.VALID:
+            time_captured = Janitor.get_time_capture(text_to_check)
+            location_captured = Janitor.get_location_capture(text_to_check)
+            return True, f"Valid data - Time: {time_captured}, Location: {location_captured}"
+        elif location_statement_state == LocationStatementState.INCOMPLETE:
+            # Has fields but missing date or time - auto-flair, user gets 30 min to fix
+            time_captured = Janitor.get_time_capture(text_to_check)
+            location_captured = Janitor.get_location_capture(text_to_check)
+            return True, f"Incomplete data (user has 30 min to fix) - Time: {time_captured}, Location: {location_captured}"
+        elif location_statement_state == LocationStatementState.INVALID:
+            # Has fields but empty - auto-flair, user gets 30 min to fix
+            return True, "Fields found but empty (user has 30 min to fix)"
+        elif location_statement_state == LocationStatementState.MISSING:
+            # No attempt at Time/Location fields - don't auto-flair
+            return False, "No Time:/Location: fields found"
+        else:
+            return False, f"Unknown state: {location_statement_state}"
+    
+    def handle_auto_flair(self, post, subreddit, settings):
+        """
+        Check if post should be auto-flaired and apply flair if appropriate.
+        
+        Returns: True if post was flaired (or would be in dry run), False otherwise
+        """
+        if not settings.auto_flair_enabled:
+            return False
+        
+        # Skip posts that are already saved (already processed)
+        if hasattr(post.submission, "saved") and post.submission.saved:
+            return False
+        
+        should_flair, reason = self.should_auto_flair(post, settings)
+        
+        if not should_flair:
+            print(f"\t[Auto-flair] Skip: {reason}")
+            return False
+        
+        # Apply flair
+        if settings.auto_flair_dry_run:
+            print(f"\t[Auto-flair] DRY RUN - Would flair as 'Sighting': {reason}")
+            self.discord_client.send_action_msg(
+                f"[DRY RUN] Would auto-flair as **Sighting**:\n"
+                f"**Title:** {post.submission.title}\n"
+                f"**Reason:** {reason}\n"
+                f"**Link:** https://reddit.com{post.submission.permalink}"
+            )
+            return True
+        else:
+            try:
+                # Apply the flair using template ID
+                post.submission.flair.select(flair_template_id=settings.auto_flair_template_id)
+                print(f"\t[Auto-flair] Applied 'Sighting' flair: {reason}")
+                self.discord_client.send_action_msg(
+                    f"Auto-flaired as **Sighting**:\n"
+                    f"**Title:** {post.submission.title}\n"
+                    f"**Reason:** {reason}\n"
+                    f"**Link:** https://reddit.com{post.submission.permalink}"
+                )
+                return True
+            except Exception as e:
+                print(f"\t[Auto-flair] Error applying flair: {e}")
+                self.discord_client.send_error_msg(
+                    f"Failed to auto-flair post:\n"
+                    f"**Title:** {post.submission.title}\n"
+                    f"**Error:** {e}"
+                )
+                return False
+
+    # ==========================================================================
+    # Location validation methods
+    # ==========================================================================
 
     def handle_location(self, post, subreddit, settings):
         if not post.has_sightings_flair(settings):
