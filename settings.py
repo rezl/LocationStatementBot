@@ -24,7 +24,7 @@ class Settings:
     auto_flair_enabled = True
     
     # Dry run mode - logs what would be flaired without actually flairing
-    auto_flair_dry_run = False
+    auto_flair_dry_run = True
     
     # The flair template ID to apply (from r/UFOs post flair settings)
     auto_flair_template_id = "de39d1a0-05e8-11ef-91aa-9a3acca53f53"
@@ -88,8 +88,7 @@ class Settings:
         ">Location: Phoenix, Arizona, USA\n>\n"
         ">I was outside walking my dog when I noticed these lights hovering silently...\n\n"
         "A brief description of what you saw is also appreciated!\n\n"
-        "You have **30 minutes** after posting to add this info. For video/image posts, add it as a comment. "
-        "If your post has already been removed, please resubmit with the required format.\n\n"
+        "To fix: If this is a text post, edit your post body. If this is a link/video/image post, add a comment with the required info. If your post has already been removed, please resubmit with the required format.\n\n"
         "**Additional sighting requirements:**\n\n"
         "- Must include a detailed and descriptive eyewitness account\n"
         "- Must have been seen with your own eyes (not found later in photos)\n"
