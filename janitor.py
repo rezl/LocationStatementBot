@@ -231,12 +231,13 @@ class Janitor:
         This handles cases where users split info across separate Date: and Time: fields.
         
         Example: "Date: Dec 7th\nTime: 8pm" -> "Dec 7th 8pm"
+        Example: "Date Dec 7th Time 8pm" -> "Dec 7th 8pm" (no separators)
         """
         if not location_statement:
             return None
         
-        # Pattern to find all date/time field values
-        pattern = r'\*{0,2}(?:time|date(?:/time)?|time/date|when)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*(.+?)(?=[ \t]*\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
+        # Pattern to find all date/time field values (separator now optional)
+        pattern = r'(?:^|[\s,])\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|(?:^|[\s,])\*{0,2}(?:time|date)|$|\n)'
         
         matches = re.findall(pattern, location_statement, re.IGNORECASE)
         
@@ -297,10 +298,44 @@ class Janitor:
         return settings.ls_removal_reason_template.format(specific_issue=specific_issue)
 
     @staticmethod
+    def build_warning_message(post, location_statement, state, settings):
+        """
+        Build a state-specific warning comment message.
+        """
+        # Determine the specific issue based on state (same logic as build_removal_reason)
+        if state == LocationStatementState.MISSING:
+            specific_issue = settings.ls_issue_missing
+        elif state == LocationStatementState.INVALID:
+            specific_issue = settings.ls_issue_invalid
+        elif state == LocationStatementState.INCOMPLETE:
+            time_result = Janitor.get_time_capture(location_statement) if location_statement else None
+            if time_result:
+                has_date = has_date_component(time_result)
+                has_time = has_time_component(time_result)
+                
+                if not has_date and not has_time:
+                    specific_issue = settings.ls_issue_incomplete_neither
+                elif not has_date:
+                    specific_issue = settings.ls_issue_incomplete_no_date
+                elif not has_time:
+                    specific_issue = settings.ls_issue_incomplete_no_time
+                else:
+                    specific_issue = settings.ls_issue_incomplete_neither
+            else:
+                specific_issue = settings.ls_issue_incomplete_neither
+        else:
+            specific_issue = ""
+        
+        return settings.ls_warning_comment_template.format(
+            specific_issue=specific_issue
+        )
+
+    @staticmethod
     def get_location_capture(location_statement):
         """
         Extract location value from statement. Handles various formats:
         - Location: somewhere (standard)
+        - Location somewhere (no separator)
         - Where: somewhere (natural alternative)
         - Location- somewhere (hyphen instead of colon)
         - Location— somewhere (em dash from mobile keyboards)
@@ -311,15 +346,19 @@ class Janitor:
         
         Returns: The captured location string, or None if no match
         """
+        if not location_statement:
+            return None
         # Pattern breakdown:
+        # (?:^|[\s,]) - Start of string or whitespace/comma (word boundary)
         # \*{0,2} - Optional markdown bold/italic (0-2 asterisks)
         # (?:location|...|where) - keyword variants and typos
         # \*{0,2} - Optional closing markdown
         # [ \t]* - Horizontal whitespace only (no newlines)
-        # [:\-\—\–] - Colon, hyphen, em dash, or en dash as separator
-        # [ \t]*\*{0,2}[ \t]* - Whitespace and optional markdown after separator
-        # ([^\n]+) - Capture one or more non-newline characters
-        pattern = r'\*{0,2}(?:location|locaiton|loaction|locaton|where)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*([^\n]+)'
+        # [:\-\—\–]? - OPTIONAL colon, hyphen, em dash, or en dash as separator
+        # [ \t]* - Whitespace after separator
+        # (.+?) - Capture content (non-greedy)
+        # (?=...|$|\n) - Stop at time keyword, end of string, or newline
+        pattern = r'(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:time|date(?:/time)?|time/date|when)|$|\n)'
         
         match = re.search(pattern, location_statement, re.IGNORECASE)
         if match:
@@ -335,6 +374,7 @@ class Janitor:
         """
         Extract time/date value from statement. Handles various formats:
         - Time: 8pm (standard)
+        - Time 8pm (no separator)
         - When: 8pm (natural alternative)
         - Time- 8pm (hyphen instead of colon)
         - Time— 8pm (em dash from mobile keyboards)
@@ -349,11 +389,19 @@ class Janitor:
         
         Returns: The captured time/date string, or None if no match
         """
-        # Pattern handles: time, date, when, date/time, time/date, time & date, etc. (with optional markdown)
-        # Uses lookahead to stop capture at Location/Where keyword (for single-line entries)
-        # [ \t]*\*{0,2}[ \t]* handles markdown asterisks after the separator
-        # The (?:\s*(?:&|/|and)\s*(?:date|time))? handles optional "& date", "/ time", "and date", etc.
-        pattern = r'\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when)\*{0,2}[ \t]*[:\-\—\–][ \t]*\*{0,2}[ \t]*(.+?)(?=[ \t]*\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
+        if not location_statement:
+            return None
+        # Pattern breakdown:
+        # (?:^|[\s,]) - Start of string or whitespace/comma (word boundary)
+        # \*{0,2} - Optional markdown
+        # (?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when) - keyword variants
+        # \*{0,2} - Optional closing markdown
+        # [ \t]* - Horizontal whitespace
+        # [:\-\—\–]? - OPTIONAL separator (colon, hyphen, dashes)
+        # [ \t]* - Whitespace after separator
+        # (.+?) - Capture content (non-greedy)
+        # (?=...|$|\n) - Stop at location keyword, end of string, or newline
+        pattern = r'(?:^|[\s,])\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
         
         match = re.search(pattern, location_statement, re.IGNORECASE)
         if match:
@@ -490,18 +538,28 @@ class Janitor:
             return
 
         # order of preference: post body, then OP comment, then title
+        # We track the best state found (VALID > INCOMPLETE > INVALID > MISSING)
         location_statement = ''
         location_statement_state = LocationStatementState.MISSING
         location_statement_source = 'none'
+        best_non_valid_state = None  # Track best non-VALID state found
+        best_non_valid_source = None
+        best_non_valid_text = None
         
         # 1. Check post body (selftext) first
         if post.submission.selftext != '':
             self_text = post.submission.selftext
             print(f"\t[Source] Checking post selftext ({len(self_text)} chars)")
-            location_statement_state = Janitor.validate_location_statement(self_text)
-            if location_statement_state == LocationStatementState.VALID:
+            body_state = Janitor.validate_location_statement(self_text)
+            if body_state == LocationStatementState.VALID:
                 location_statement = self_text
+                location_statement_state = body_state
                 location_statement_source = 'selftext'
+            elif body_state in (LocationStatementState.INCOMPLETE, LocationStatementState.INVALID):
+                # Track this as the best non-valid state so far
+                best_non_valid_state = body_state
+                best_non_valid_source = 'selftext'
+                best_non_valid_text = self_text
 
         # 2. If selftext didn't have valid statement, check OP comments
         if not location_statement:
@@ -509,10 +567,18 @@ class Janitor:
             comment_statement = post.find_location_statement()
             if comment_statement and hasattr(comment_statement, "body"):
                 print(f"\t[Source] Found OP comment ({len(comment_statement.body)} chars)")
-                location_statement_state = Janitor.validate_location_statement(comment_statement.body)
-                if location_statement_state == LocationStatementState.VALID:
+                comment_state = Janitor.validate_location_statement(comment_statement.body)
+                if comment_state == LocationStatementState.VALID:
                     location_statement = comment_statement.body
+                    location_statement_state = comment_state
                     location_statement_source = 'comment'
+                elif comment_state in (LocationStatementState.INCOMPLETE, LocationStatementState.INVALID):
+                    # Only update if better than what we have (INCOMPLETE > INVALID)
+                    if best_non_valid_state is None or \
+                       (comment_state == LocationStatementState.INCOMPLETE and best_non_valid_state == LocationStatementState.INVALID):
+                        best_non_valid_state = comment_state
+                        best_non_valid_source = 'comment'
+                        best_non_valid_text = comment_statement.body
             else:
                 print(f"\t[Source] No OP comment with 'location' keyword found")
 
@@ -520,23 +586,78 @@ class Janitor:
         if not location_statement:
             title = post.submission.title
             print(f"\t[Source] Checking post title: '{title}'")
-            location_statement_state = Janitor.validate_location_statement(title)
-            if location_statement_state == LocationStatementState.VALID:
+            title_state = Janitor.validate_location_statement(title)
+            if title_state == LocationStatementState.VALID:
                 location_statement = title
+                location_statement_state = title_state
                 location_statement_source = 'title'
+            elif title_state in (LocationStatementState.INCOMPLETE, LocationStatementState.INVALID):
+                # Only update if better than what we have
+                if best_non_valid_state is None or \
+                   (title_state == LocationStatementState.INCOMPLETE and best_non_valid_state == LocationStatementState.INVALID):
+                    best_non_valid_state = title_state
+                    best_non_valid_source = 'title'
+                    best_non_valid_text = title
+        
+        # If no VALID found, use the best non-valid state we found
+        if not location_statement and best_non_valid_state:
+            location_statement_state = best_non_valid_state
+            location_statement_source = best_non_valid_source
+            location_statement = best_non_valid_text
 
         timeout_mins = settings.location_statement_time_limit_mins
+        
+        # Check if bot already left a warning comment on this post
+        bot_warning_comment = self.find_bot_warning_comment(post)
 
-        # users are given time to post a location statement
-        if not post.is_post_old(timeout_mins):
-            print("\tTime has not expired")
+        # If post is VALID
+        if location_statement_state == LocationStatementState.VALID:
+            # If there was a warning comment, user fixed it - delete the warning
+            if bot_warning_comment:
+                self.delete_warning_comment(bot_warning_comment, post, settings)
+            
+            # Save the submission and log to Google Sheets
+            self.reddit_handler.save_content(post.submission)
+            print(f"\tPost has valid location statement (source: {location_statement_source})")
+            location = Janitor.get_location_capture(location_statement)
+            time_seen = Janitor.get_time_capture(location_statement)
+            dt_utc = datetime.utcfromtimestamp(post.submission.created_utc)
+            formatted_dt = dt_utc.isoformat().replace('T', ' ')
+            sheet_values = [[location, time_seen, formatted_dt, f"https://www.reddit.com{post.submission.permalink}"]]
+            self.google_sheets_recorder.append_to_sheet(subreddit.display_name, sheet_values)
             return
-        print("\tTime has expired")
 
-        if location_statement_state == LocationStatementState.MISSING or \
-                location_statement_state == LocationStatementState.INVALID or \
-                location_statement_state == LocationStatementState.INCOMPLETE:
+        # Post has issues (MISSING/INVALID/INCOMPLETE)
+        if location_statement_state in (LocationStatementState.MISSING, 
+                                         LocationStatementState.INVALID, 
+                                         LocationStatementState.INCOMPLETE):
+            
+            # If warning comments enabled and no warning yet and post is not too old, post a warning
+            if settings.warning_comment_enabled and not bot_warning_comment and not post.is_post_old(timeout_mins):
+                self.post_warning_comment(post, location_statement, location_statement_state, settings)
+                print("\tPosted warning comment, waiting for user to fix")
+                return
+            
+            # If post is still within grace period, wait
+            if not post.is_post_old(timeout_mins):
+                if settings.warning_comment_enabled:
+                    print("\tTime has not expired, warning already posted")
+                else:
+                    print("\tTime has not expired, waiting")
+                return
+            
+            # Time has expired - take action
+            print("\tTime has expired")
             print(f"\tPost has {location_statement_state} location statement (source: {location_statement_source})")
+            
+            # Delete warning comment before removing (cleaner)
+            if bot_warning_comment:
+                try:
+                    bot_warning_comment.delete()
+                    print("\tDeleted warning comment before removal")
+                except Exception as e:
+                    print(f"\tFailed to delete warning comment: {e}")
+            
             if post.is_moderator_approved():
                 self.reddit_handler.report_content(post.submission,
                                                    f"Moderator approved post, but has {location_statement_state}"
@@ -549,19 +670,65 @@ class Janitor:
                 removal_reason = Janitor.build_removal_reason(location_statement, location_statement_state, settings)
                 self.reddit_handler.remove_content(post.submission, removal_reason,
                                                    f"{location_statement_state} location statement")
-        elif location_statement_state == LocationStatementState.VALID:
-            # we 'save' the submission on reddit so the bot knows which posts it's already recorded
-            # and 'saved' content does not need further processing
-            self.reddit_handler.save_content(post.submission)
-            print(f"\tPost has valid location statement (source: {location_statement_source})")
-            location = Janitor.get_location_capture(location_statement)
-            time_seen = Janitor.get_time_capture(location_statement)
-            dt_utc = datetime.utcfromtimestamp(post.submission.created_utc)
-            formatted_dt = dt_utc.isoformat().replace('T', ' ')
-            sheet_values = [[location, time_seen, formatted_dt, f"https://www.reddit.com{post.submission.permalink}"]]
-            self.google_sheets_recorder.append_to_sheet(subreddit.display_name, sheet_values)
         else:
             raise RuntimeError(f"\tUnsupported location_statement_state: {location_statement_state}")
+
+    def find_bot_warning_comment(self, post):
+        """Find a warning comment left by the bot on this post."""
+        try:
+            post.submission.comments.replace_more(limit=0)
+            for comment in post.submission.comments:
+                if comment.author and comment.author.name == self.bot_username:
+                    if "needs the required **time** and **location**" in comment.body:
+                        return comment
+        except Exception as e:
+            print(f"\t[Warning] Error checking for bot comment: {e}")
+        return None
+
+    def post_warning_comment(self, post, location_statement, state, settings):
+        """Post a pinned warning comment on the post."""
+        try:
+            warning_message = Janitor.build_warning_message(post, location_statement, state, settings)
+            
+            if settings.is_dry_run:
+                print(f"\t[Warning Comment] DRY RUN - Would post warning comment")
+                return
+            
+            comment = post.submission.reply(warning_message)
+            comment.mod.distinguish(sticky=True)
+            print(f"\t[Warning Comment] Posted and pinned warning comment")
+            
+            self.discord_client.send_action_msg(
+                f"Posted warning comment on post:\n"
+                f"**Post:** {post.submission.title[:50]}...\n"
+                f"**Issue:** {state.value}\n"
+                f"**Link:** https://reddit.com{post.submission.permalink}"
+            )
+        except Exception as e:
+            print(f"\t[Warning Comment] Failed to post warning: {e}")
+            self.discord_client.send_error_msg(
+                f"Failed to post warning comment:\n"
+                f"**Post:** {post.submission.title[:50]}\n"
+                f"**Error:** {e}"
+            )
+
+    def delete_warning_comment(self, comment, post, settings):
+        """Delete a warning comment after user has fixed their post."""
+        try:
+            if settings.is_dry_run:
+                print(f"\t[Warning Comment] DRY RUN - Would delete warning comment")
+                return
+                
+            comment.delete()
+            print(f"\t[Warning Comment] Deleted warning - user fixed their post")
+            
+            self.discord_client.send_action_msg(
+                f"User fixed their post, deleted warning comment:\n"
+                f"**Post:** {post.submission.title[:50]}...\n"
+                f"**Link:** https://reddit.com{post.submission.permalink}"
+            )
+        except Exception as e:
+            print(f"\t[Warning Comment] Failed to delete warning: {e}")
 
     def handle_posts(self, subreddit):
         settings = self.settings_map[subreddit.display_name.lower()]
