@@ -142,7 +142,7 @@ class Settings:
     # Warning comment template - posted when post is first detected with issues
     # {specific_issue} will be replaced with state-specific text
     ls_warning_comment_template = (
-        "This post needs the required **time** and **location** info or it will be removed.\n\n"
+        "This post is missing the required [**time** and **location** info](https://ufos.wiki/track/sightings-post-guidelines/) and will be removed automatically if not added soon. If you believe you've already included this info, please check the [guidelines](https://ufos.wiki/track/sightings-post-guidelines/) for the correct format.\n\n"
         "{specific_issue}"
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
