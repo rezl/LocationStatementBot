@@ -12,7 +12,7 @@ class Settings:
     post_check_threshold_mins = 2 * 60
     consecutive_old_posts = 5
 
-    location_statement_time_limit_mins = 25
+    location_statement_time_limit_mins = 30
 
     sightings_flair = ["Sighting"]
     
