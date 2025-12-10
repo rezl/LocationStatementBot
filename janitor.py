@@ -34,6 +34,7 @@ def has_time_component(text):
         r'\d{1,2}\s*(?:am|pm|a\.m\.|p\.m\.)',     # 8pm, 8 PM, 8 a.m.
         r'(?:morning|afternoon|evening|night|midnight|noon|dusk|dawn)',  # descriptive times
         r'around\s+\d{1,2}(?!\s*(?:th|st|nd|rd))',  # around 8 (but not "around 8th" which is a date)
+        r'\b(?:[01]\d|2[0-3])[0-5]\d\b',          # Military time: 0000-2359
     ]
     text_lower = text.lower()
     for pattern in patterns:
