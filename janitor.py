@@ -671,6 +671,8 @@ class Janitor:
                 removal_reason = Janitor.build_removal_reason(location_statement, location_statement_state, settings)
                 self.reddit_handler.remove_content(post.submission, removal_reason,
                                                    f"{location_statement_state} location statement")
+                # Save the post so bot knows it's been actioned (prevents duplicate removals)
+                self.reddit_handler.save_content(post.submission)
         else:
             raise RuntimeError(f"\tUnsupported location_statement_state: {location_statement_state}")
 
