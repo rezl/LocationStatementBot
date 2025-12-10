@@ -12,7 +12,7 @@ class Settings:
     post_check_threshold_mins = 2 * 60
     consecutive_old_posts = 5
 
-    location_statement_time_limit_mins = 30
+    location_statement_time_limit_mins = 25
 
     sightings_flair = ["Sighting"]
     
@@ -78,7 +78,8 @@ class Settings:
     
     # Base removal message template - {specific_issue} will be replaced with state-specific text
     ls_removal_reason_template = (
-        "Your post has been removed because the **time** and **location** of your sighting were not included in the required format.\n\n"
+        "Your post has been removed because the **time** and **location** of your sighting were either missing or not in the required format.\n\n"
+        "Our sightings bot requires specific formatting as outlined in the [guidelines](https://ufos.wiki/track/sightings-post-guidelines/). Note that this info must be in your post body or a comment - if it was only in the title, the bot won't detect it.\n\n"
         "{specific_issue}"
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
@@ -143,6 +144,7 @@ class Settings:
     # {specific_issue} will be replaced with state-specific text
     ls_warning_comment_template = (
         "This post is missing the required [**time** and **location** info](https://ufos.wiki/track/sightings-post-guidelines/) and will be removed automatically if not added soon. If you believe you've already included this info, please check the [guidelines](https://ufos.wiki/track/sightings-post-guidelines/) for the correct format.\n\n"
+        "Our sightings bot requires specific formatting as outlined in the [guidelines](https://ufos.wiki/track/sightings-post-guidelines/). Note that this info must be in your post body or a comment - if it was only in the title, the bot won't detect it.\n\n"
         "{specific_issue}"
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
