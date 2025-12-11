@@ -143,17 +143,17 @@ class Settings:
     # Warning comment template - posted when post is first detected with issues
     # {specific_issue} will be replaced with state-specific text
     ls_warning_comment_template = (
-        "This post is missing the required [**time** and **location** info](https://ufos.wiki/track/sightings-post-guidelines/) and will be removed automatically if not added soon. If you believe you've already included this info, please check the [guidelines](https://ufos.wiki/track/sightings-post-guidelines/) for the correct format.\n\n"
+        "This post is missing the required **time** and **location** info and will be removed automatically if not added soon. If you believe you've already included this info, please check the guidelines for the correct format.\n\n"
         "Our sightings bot requires specific formatting as outlined in the [guidelines](https://ufos.wiki/track/sightings-post-guidelines/). Note that this info must be in your post body or a comment - if it was only in the title, the bot won't detect it.\n\n"
         "{specific_issue}"
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
         ">Location: [city, state/province, country]\n\n"
-        "**Example:**\n\n"
-        ">Time: December 9, 2025 at 10:30 PM\n>\n"
-        ">Location: Phoenix, Arizona, USA\n>\n"
-        ">I was outside walking my dog when I noticed these lights hovering silently...\n\n"
-        "A brief description of what you saw is also appreciated!\n\n"
+        "❌ **Wrong:** \"I saw this on December 5th around 9pm in Phoenix, Arizona\"\n\n"
+        "✅ **Right:**\n\n"
+        ">Time: December 5, 2025 at 9:00 PM\n>\n"
+        ">Location: Phoenix, Arizona, USA\n\n"
+        "Please provide a detailed description of your sighting (min 150 characters).\n\n"
         "**How to fix:** If this is a text post, edit your post body. If this is a link/video/image post, add a comment with the required info.\n\n"
         "**Additional sighting requirements:**\n\n"
         "- Must include a detailed and descriptive eyewitness account\n"
