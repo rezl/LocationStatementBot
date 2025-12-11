@@ -651,6 +651,12 @@ class Janitor:
             print("\tTime has expired")
             print(f"\tPost has {location_statement_state} location statement (source: {location_statement_source})")
             
+            # Check if we already posted a removal comment (prevents duplicates)
+            bot_removal_comment = self.find_bot_removal_comment(post)
+            if bot_removal_comment:
+                print("\tRemoval comment already exists, skipping")
+                return
+            
             # Delete warning comment before removing (cleaner)
             if bot_warning_comment:
                 try:
@@ -663,20 +669,14 @@ class Janitor:
                 self.reddit_handler.report_content(post.submission,
                                                    f"Moderator approved post, but has {location_statement_state}"
                                                    f" location statement (checked: {location_statement_source}). Please look.")
-                # Save the post so bot knows it's been actioned (prevents duplicate reports)
-                self.reddit_handler.save_content(post.submission)
             elif settings.report_location_statement_timeout:
                 self.reddit_handler.report_content(post.submission,
                                                    f"Post has a {location_statement_state} location statement "
                                                    f"after timeout (checked: {location_statement_source}). Please look.")
-                # Save the post so bot knows it's been actioned (prevents duplicate reports)
-                self.reddit_handler.save_content(post.submission)
             else:
                 removal_reason = Janitor.build_removal_reason(location_statement, location_statement_state, settings)
                 self.reddit_handler.remove_content(post.submission, removal_reason,
                                                    f"{location_statement_state} location statement")
-                # Save the post so bot knows it's been actioned (prevents duplicate removals)
-                self.reddit_handler.save_content(post.submission)
         else:
             raise RuntimeError(f"\tUnsupported location_statement_state: {location_statement_state}")
 
@@ -690,6 +690,18 @@ class Janitor:
                         return comment
         except Exception as e:
             print(f"\t[Warning] Error checking for bot comment: {e}")
+        return None
+
+    def find_bot_removal_comment(self, post):
+        """Find a removal comment left by the bot on this post."""
+        try:
+            post.submission.comments.replace_more(limit=0)
+            for comment in post.submission.comments:
+                if comment.author and comment.author.name == self.bot_username:
+                    if "has been removed because" in comment.body and "time" in comment.body and "location" in comment.body:
+                        return comment
+        except Exception as e:
+            print(f"\t[Warning] Error checking for bot removal comment: {e}")
         return None
 
     def post_warning_comment(self, post, location_statement, state, settings):
