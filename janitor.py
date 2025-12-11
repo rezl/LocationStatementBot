@@ -663,10 +663,14 @@ class Janitor:
                 self.reddit_handler.report_content(post.submission,
                                                    f"Moderator approved post, but has {location_statement_state}"
                                                    f" location statement (checked: {location_statement_source}). Please look.")
+                # Save the post so bot knows it's been actioned (prevents duplicate reports)
+                self.reddit_handler.save_content(post.submission)
             elif settings.report_location_statement_timeout:
                 self.reddit_handler.report_content(post.submission,
                                                    f"Post has a {location_statement_state} location statement "
                                                    f"after timeout (checked: {location_statement_source}). Please look.")
+                # Save the post so bot knows it's been actioned (prevents duplicate reports)
+                self.reddit_handler.save_content(post.submission)
             else:
                 removal_reason = Janitor.build_removal_reason(location_statement, location_statement_state, settings)
                 self.reddit_handler.remove_content(post.submission, removal_reason,
@@ -682,7 +686,7 @@ class Janitor:
             post.submission.comments.replace_more(limit=0)
             for comment in post.submission.comments:
                 if comment.author and comment.author.name == self.bot_username:
-                    if "needs the required **time** and **location**" in comment.body:
+                    if "is missing the required" in comment.body and "time" in comment.body and "location" in comment.body:
                         return comment
         except Exception as e:
             print(f"\t[Warning] Error checking for bot comment: {e}")
