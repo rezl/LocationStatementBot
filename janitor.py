@@ -271,7 +271,18 @@ class Janitor:
         """
         # Determine the specific issue based on state
         if state == LocationStatementState.MISSING:
-            specific_issue = settings.ls_issue_missing
+            # Check which specific field is missing
+            time_result = Janitor.get_time_capture(location_statement) if location_statement else None
+            location_result = Janitor.get_location_capture(location_statement) if location_statement else None
+            
+            if time_result is None and location_result is None:
+                specific_issue = settings.ls_issue_missing
+            elif time_result is None:
+                specific_issue = settings.ls_issue_missing_time
+            elif location_result is None:
+                specific_issue = settings.ls_issue_missing_location
+            else:
+                specific_issue = settings.ls_issue_missing
         elif state == LocationStatementState.INVALID:
             specific_issue = settings.ls_issue_invalid
         elif state == LocationStatementState.INCOMPLETE:
@@ -305,7 +316,18 @@ class Janitor:
         """
         # Determine the specific issue based on state (same logic as build_removal_reason)
         if state == LocationStatementState.MISSING:
-            specific_issue = settings.ls_issue_missing
+            # Check which specific field is missing
+            time_result = Janitor.get_time_capture(location_statement) if location_statement else None
+            location_result = Janitor.get_location_capture(location_statement) if location_statement else None
+            
+            if time_result is None and location_result is None:
+                specific_issue = settings.ls_issue_missing
+            elif time_result is None:
+                specific_issue = settings.ls_issue_missing_time
+            elif location_result is None:
+                specific_issue = settings.ls_issue_missing_location
+            else:
+                specific_issue = settings.ls_issue_missing
         elif state == LocationStatementState.INVALID:
             specific_issue = settings.ls_issue_invalid
         elif state == LocationStatementState.INCOMPLETE:
