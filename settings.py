@@ -84,11 +84,12 @@ class Settings:
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
         ">Location: [city, state/province, country]\n\n"
-        "**Example:**\n\n"
-        ">Time: December 9, 2025 at 10:30 PM\n>\n"
-        ">Location: Phoenix, Arizona, USA\n>\n"
-        ">I was outside walking my dog when I noticed these lights hovering silently...\n\n"
-        "A brief description of what you saw is also appreciated!\n\n"
+        "**Note:** Your post must include the exact words `Time:` and `Location:` at the start of each line - the bot looks for these labels.\n\n"
+        "❌ **Wrong:** \"I saw this on December 5th around 9pm in Phoenix, Arizona\"\n\n"
+        "✅ **Right:**\n\n"
+        ">Time: December 5, 2025 at 9:00 PM\n>\n"
+        ">Location: Phoenix, Arizona, USA\n\n"
+        "Please provide a detailed description of your sighting (min 150 characters).\n\n"
         "To fix: If this is a text post, edit your post body. If this is a link/video/image post, add a comment with the required info. If your post has already been removed, please resubmit with the required format.\n\n"
         "**Additional sighting requirements:**\n\n"
         "- Must include a detailed and descriptive eyewitness account\n"
@@ -106,6 +107,18 @@ class Settings:
     # State-specific issue descriptions
     ls_issue_missing = (
         "**Issue:** No `Time:` or `Location:` fields were found in your post.\n\n"
+    )
+    
+    ls_issue_missing_time = (
+        "**Issue:** No `Time:` field was found in your post.\n\n"
+        "Your post has a `Location:` field, but the bot couldn't find a `Time:` field. "
+        "Make sure you include `Time:` followed by the date and time of your sighting.\n\n"
+    )
+    
+    ls_issue_missing_location = (
+        "**Issue:** No `Location:` field was found in your post.\n\n"
+        "Your post has a `Time:` field, but the bot couldn't find a `Location:` field. "
+        "Make sure you include `Location:` followed by where the sighting occurred.\n\n"
     )
     
     ls_issue_invalid = (
@@ -149,6 +162,7 @@ class Settings:
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         ">Time: [specific date AND time of day]\n>\n"
         ">Location: [city, state/province, country]\n\n"
+        "**Note:** Your post must include the exact words `Time:` and `Location:` at the start of each line - the bot looks for these labels.\n\n"
         "❌ **Wrong:** \"I saw this on December 5th around 9pm in Phoenix, Arizona\"\n\n"
         "✅ **Right:**\n\n"
         ">Time: December 5, 2025 at 9:00 PM\n>\n"
