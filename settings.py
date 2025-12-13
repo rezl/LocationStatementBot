@@ -84,7 +84,7 @@ class Settings:
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         "    Time: [specific date AND time of day]\n"
         "    Location: [city, state/province, country]\n\n"
-        "**Note:** Your post must include the exact words `Time:` and `Location:` at the start of each line - the bot looks for these labels.\n\n"
+        "**Note:** Your post must include the exact words Time: and Location: at the start of each line - the bot looks for these labels.\n\n"
         "❌ **Wrong:** \"I saw this on December 5th around 9pm in Phoenix, Arizona\"\n\n"
         "✅ **Right:**\n\n"
         "    Time: December 5, 2025 at 9:00 PM\n"
@@ -106,41 +106,41 @@ class Settings:
     
     # State-specific issue descriptions
     ls_issue_missing = (
-        "**Issue:** No `Time:` or `Location:` fields were found in your post.\n\n"
+        "**Issue:** No Time: or Location: fields were found in your post.\n\n"
     )
     
     ls_issue_missing_time = (
-        "**Issue:** No `Time:` field was found in your post.\n\n"
-        "Your post has a `Location:` field, but the bot couldn't find a `Time:` field. "
-        "Make sure you include `Time:` followed by the date and time of your sighting.\n\n"
+        "**Issue:** No Time: field was found in your post.\n\n"
+        "Your post has a Location: field, but the bot couldn't find a Time: field. "
+        "Make sure you include Time: followed by the date and time of your sighting.\n\n"
     )
     
     ls_issue_missing_location = (
-        "**Issue:** No `Location:` field was found in your post.\n\n"
-        "Your post has a `Time:` field, but the bot couldn't find a `Location:` field. "
-        "Make sure you include `Location:` followed by where the sighting occurred.\n\n"
+        "**Issue:** No Location: field was found in your post.\n\n"
+        "Your post has a Time: field, but the bot couldn't find a Location: field. "
+        "Make sure you include Location: followed by where the sighting occurred.\n\n"
     )
     
     ls_issue_invalid = (
-        "**Issue:** The `Time:` or `Location:` fields were found but appear to be empty.\n\n"
+        "**Issue:** The Time: or Location: fields were found but appear to be empty.\n\n"
     )
     
     ls_issue_incomplete_no_date = (
         "**Issue:** Your time field is missing a **specific date**.\n\n"
         "You wrote a time of day but didn't include when it happened. "
-        "Please include an actual date like `December 7th` or `12/7/24` - "
-        "relative terms like `yesterday` or `Saturday` don't work because they become meaningless over time.\n\n"
+        "Please include an actual date like December 7th or 12/7/24 - "
+        "relative terms like yesterday or Saturday don't work because they become meaningless over time.\n\n"
     )
     
     ls_issue_incomplete_no_time = (
         "**Issue:** Your time field is missing the **time of day**.\n\n"
         "You included a date but didn't specify what time it happened. "
-        "Please add a time like `8pm`, `20:00`, or even `evening` or `night`.\n\n"
+        "Please add a time like 8pm, 20:00, or even evening or night.\n\n"
     )
     
     ls_issue_incomplete_neither = (
         "**Issue:** Your time field is missing both a **specific date** and **time of day**.\n\n"
-        "Please include when the sighting happened, for example: `December 7, 2024 at 8pm`\n\n"
+        "Please include when the sighting happened, for example: December 7, 2024 at 8pm\n\n"
     )
     
     # Fallback for backwards compatibility
@@ -162,7 +162,7 @@ class Settings:
         "**Required format** (in post body or as a comment, each on a separate line):\n\n"
         "    Time: [specific date AND time of day]\n"
         "    Location: [city, state/province, country]\n\n"
-        "**Note:** Your post must include the exact words `Time:` and `Location:` at the start of each line - the bot looks for these labels.\n\n"
+        "**Note:** Your post must include the exact words Time: and Location: at the start of each line - the bot looks for these labels.\n\n"
         "❌ **Wrong:** \"I saw this on December 5th around 9pm in Phoenix, Arizona\"\n\n"
         "✅ **Right:**\n\n"
         "    Time: December 5, 2025 at 9:00 PM\n"
