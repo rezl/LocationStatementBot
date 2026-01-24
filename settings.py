@@ -21,7 +21,7 @@ class Settings:
     # ==========================================================================
     
     # Enable/disable auto-flair feature
-    auto_flair_enabled = True
+    auto_flair_enabled = False
     
     # Dry run mode - logs what would be flaired without actually flairing
     auto_flair_dry_run = False
