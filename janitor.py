@@ -231,17 +231,22 @@ class Janitor:
         """
         Extract content from ALL Time/Date/When fields and combine them.
         This handles cases where users split info across separate Date: and Time: fields.
-        
+
         Example: "Date: Dec 7th\nTime: 8pm" -> "Dec 7th 8pm"
         Example: "Date Dec 7th Time 8pm" -> "Dec 7th 8pm" (no separators)
         """
         if not location_statement:
             return None
-        
-        # Pattern to find all date/time field values (separator now optional)
-        pattern = r'(?:^|[\s,])\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|(?:^|[\s,])\*{0,2}(?:time|date)|$|\n)'
-        
-        matches = re.findall(pattern, location_statement, re.IGNORECASE)
+
+        # Pattern for time/date keywords (separator optional - these words rarely appear in prose)
+        time_date_pattern = r'(?:^|[\s,])\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|(?:^|[\s,])\*{0,2}(?:time|date)|$|\n)'
+
+        # Pattern for "when" keyword (separator REQUIRED - "when" is common in prose)
+        when_pattern = r'(?:^|[\s,])\*{0,2}when\*{0,2}[ \t]*[:\-\—\–][ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|(?:^|[\s,])\*{0,2}(?:time|date)|$|\n)'
+
+        # Find all matches from both patterns
+        matches = re.findall(time_date_pattern, location_statement, re.IGNORECASE)
+        matches.extend(re.findall(when_pattern, location_statement, re.IGNORECASE))
         
         if not matches:
             return None
@@ -372,25 +377,26 @@ class Janitor:
         """
         if not location_statement:
             return None
-        # Pattern breakdown:
-        # (?:^|[\s,]) - Start of string or whitespace/comma (word boundary)
-        # \*{0,2} - Optional markdown bold/italic (0-2 asterisks)
-        # (?:location|...|where) - keyword variants and typos
-        # \*{0,2} - Optional closing markdown
-        # [ \t]* - Horizontal whitespace only (no newlines)
-        # [:\-\—\–]? - OPTIONAL colon, hyphen, em dash, or en dash as separator
-        # [ \t]* - Whitespace after separator
-        # (.+?) - Capture content (non-greedy)
-        # (?=...|$|\n) - Stop at time keyword, end of string, or newline
-        pattern = r'(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:time|date(?:/time)?|time/date|when)|$|\n)'
-        
-        match = re.search(pattern, location_statement, re.IGNORECASE)
+        # Pattern for location keywords (separator optional - these are rarely used in prose)
+        location_pattern = r'(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:time|date(?:/time)?|time/date|when)|$|\n)'
+
+        # Pattern for "where" keyword (separator REQUIRED - "where" is common in prose)
+        where_pattern = r'(?:^|[\s,])\*{0,2}where\*{0,2}[ \t]*[:\-\—\–][ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:time|date(?:/time)?|time/date|when)|$|\n)'
+
+        # Try location pattern first, then fall back to "where" pattern
+        match = re.search(location_pattern, location_statement, re.IGNORECASE)
+        if not match:
+            match = re.search(where_pattern, location_statement, re.IGNORECASE)
         if match:
             result = match.group(1).strip()
             # Remove leading/trailing markdown asterisks from captured content
             result = re.sub(r'^\*+\s*', '', result)  # Leading asterisks
             result = re.sub(r'\s*\*+$', '', result)  # Trailing asterisks
-            return result.strip() if result.strip() else None
+            result = result.strip()
+            # Sanity check: a real location field is never 150+ chars
+            if result and len(result) > 150:
+                return None
+            return result if result else None
         return None
 
     @staticmethod
@@ -418,22 +424,35 @@ class Janitor:
         # Pattern breakdown:
         # (?:^|[\s,]) - Start of string or whitespace/comma (word boundary)
         # \*{0,2} - Optional markdown
-        # (?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when) - keyword variants
+        # (?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?) - time/date keywords
         # \*{0,2} - Optional closing markdown
         # [ \t]* - Horizontal whitespace
-        # [:\-\—\–]? - OPTIONAL separator (colon, hyphen, dashes)
+        # [:\-\—\–]? - OPTIONAL separator for time/date (colon, hyphen, dashes)
         # [ \t]* - Whitespace after separator
         # (.+?) - Capture content (non-greedy)
         # (?=...|$|\n) - Stop at location keyword, end of string, or newline
-        pattern = r'(?:^|[\s,])\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?|when)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
-        
-        match = re.search(pattern, location_statement, re.IGNORECASE)
+
+        # Pattern for time/date keywords (separator optional - these words are rarely used in prose)
+        time_date_pattern = r'(?:^|[\s,])\*{0,2}(?:time(?:\s*(?:&|/|and)\s*date)?|date(?:\s*(?:&|/|and)\s*time)?)\*{0,2}[ \t]*[:\-\—\–]?[ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
+
+        # Pattern for "when" keyword (separator REQUIRED - "when" is common in prose)
+        when_pattern = r'(?:^|[\s,])\*{0,2}when\*{0,2}[ \t]*[:\-\—\–][ \t]*(.+?)(?=(?:^|[\s,])\*{0,2}(?:location|locaiton|loaction|locaton|where)|$|\n)'
+
+        # Try time/date pattern first, then fall back to "when" pattern
+        match = re.search(time_date_pattern, location_statement, re.IGNORECASE)
+        if not match:
+            match = re.search(when_pattern, location_statement, re.IGNORECASE)
         if match:
             result = match.group(1).strip()
             # Remove leading/trailing markdown asterisks from captured content
             result = re.sub(r'^\*+\s*', '', result)  # Leading asterisks
             result = re.sub(r'\s*\*+$', '', result)  # Trailing asterisks
-            return result.strip() if result.strip() else None
+            result = result.strip()
+            # Sanity check: a real time/date field is never 150+ chars
+            # (e.g. "December 25, 2024 at approximately 8:30pm EST" is ~45 chars)
+            if result and len(result) > 150:
+                return None
+            return result if result else None
         return None
 
     # ==========================================================================
