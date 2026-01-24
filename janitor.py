@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from post import Post
+from natural_language_detector import detect_all_from_post
 
 
 def has_date_component(text):
@@ -628,6 +629,36 @@ class Janitor:
             location_statement_source = best_non_valid_source
             location_statement = best_non_valid_text
 
+        # ======================================================================
+        # TIER 2: Natural Language Detection (fallback)
+        # If Tier 1 (strict format) didn't find valid data, try detecting
+        # date/time/location from natural language in the combined text.
+        # ======================================================================
+        nlp_result = None
+        if location_statement_state != LocationStatementState.VALID:
+            print(f"\t[Tier 2] Strict format failed ({location_statement_state}), trying NLP detection...")
+            nlp_result = detect_all_from_post(post)
+
+            if nlp_result.is_valid:
+                print(f"\t[Tier 2] NLP detection SUCCESS:")
+                print(f"\t         Date: {nlp_result.date} (from {nlp_result.date_source})")
+                print(f"\t         Time: {nlp_result.time} (from {nlp_result.time_source})")
+                print(f"\t         Location: {nlp_result.location} (from {nlp_result.location_source})")
+
+                # Override to VALID - the post has all required info, just not in strict format
+                location_statement_state = LocationStatementState.VALID
+                location_statement_source = 'nlp_detected'
+                # Store NLP result for later use in sheets logging
+            else:
+                missing = []
+                if not nlp_result.date:
+                    missing.append("date")
+                if not nlp_result.time:
+                    missing.append("time")
+                if not nlp_result.location:
+                    missing.append("location")
+                print(f"\t[Tier 2] NLP detection FAILED - missing: {', '.join(missing)}")
+
         timeout_mins = settings.location_statement_time_limit_mins
         
         # Check if bot already left a warning comment on this post
@@ -638,12 +669,24 @@ class Janitor:
             # If there was a warning comment, user fixed it - delete the warning
             if bot_warning_comment:
                 self.delete_warning_comment(bot_warning_comment, post, settings)
-            
+
             # Save the submission and log to Google Sheets
             self.reddit_handler.save_content(post.submission)
             print(f"\tPost has valid location statement (source: {location_statement_source})")
-            location = Janitor.get_location_capture(location_statement)
-            time_seen = Janitor.get_time_capture(location_statement)
+
+            # Extract data for sheets - use NLP results if that's how we validated
+            if location_statement_source == 'nlp_detected' and nlp_result:
+                # Use NLP-extracted values (best-effort extraction)
+                location = nlp_result.location
+                time_seen = nlp_result.date  # NLP extracts date separately
+                if nlp_result.time:
+                    time_seen = f"{nlp_result.date} {nlp_result.time}"  # Combine date and time
+                print(f"\t[Sheets] Using NLP-extracted data: location='{location}', time='{time_seen}'")
+            else:
+                # Use strict format extraction
+                location = Janitor.get_location_capture(location_statement)
+                time_seen = Janitor.get_time_capture(location_statement)
+
             dt_utc = datetime.utcfromtimestamp(post.submission.created_utc)
             formatted_dt = dt_utc.isoformat().replace('T', ' ')
             sheet_values = [[location, time_seen, formatted_dt, f"https://www.reddit.com{post.submission.permalink}"]]
